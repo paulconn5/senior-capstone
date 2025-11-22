@@ -1,0 +1,260 @@
+.settings-page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.settings-main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.settings-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 2rem 0;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Settings Section */
+.settings-section {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-icon {
+  font-size: 1.5rem;
+  color: #e00122;
+}
+
+.section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #e00122;
+  margin: 0;
+}
+
+/* Form Groups */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #e00122;
+  box-shadow: 0 0 0 3px rgba(224, 1, 34, 0.1);
+}
+
+/* Toggle Groups */
+.toggle-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.toggle-group:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.toggle-group:first-child {
+  padding-top: 0;
+}
+
+.toggle-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 0.25rem 0;
+}
+
+.toggle-info p {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 28px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #e00122;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
+/* Security Options */
+.security-option {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  background: none;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 0.95rem;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.75rem;
+}
+
+.security-option:last-child {
+  margin-bottom: 0;
+}
+
+.security-option:hover {
+  background-color: #f8f8f8;
+  border-color: #e00122;
+  color: #e00122;
+}
+
+/* Action Buttons */
+.settings-actions {
+  display: flex;
+  gap: 1rem;
+  padding-top: 1rem;
+}
+
+.btn-save,
+.btn-cancel {
+  padding: 0.9rem 2.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-save {
+  background-color: #e00122;
+  color: white;
+  flex: 1;
+}
+
+.btn-save:hover {
+  background-color: #c00120;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(224, 1, 34, 0.2);
+}
+
+.btn-cancel {
+  background-color: white;
+  color: #666;
+  border: 1px solid #ddd;
+  flex: 0 0 auto;
+}
+
+.btn-cancel:hover {
+  background-color: #f8f8f8;
+  border-color: #999;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .settings-main {
+    padding: 1rem;
+  }
+
+  .settings-title {
+    font-size: 1.5rem;
+  }
+
+  .settings-section {
+    padding: 1.5rem;
+  }
+
+  .toggle-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .btn-save,
+  .btn-cancel {
+    width: 100%;
+  }
+}
