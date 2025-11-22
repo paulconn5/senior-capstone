@@ -1,6 +1,11 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import Login from './pages/Login'
+import MentorMatch from './pages/MentorMatch'
+import MentorDetail from './pages/MentorDetail'
+import Profile from './pages/Profile'
+import Messages from './pages/Messages'
+import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 import './styles/App.css'
 
@@ -15,6 +20,11 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Login />} />
+          <Route path="/dashboard" element={<MentorMatch />} />
+          <Route path="/mentor/:id" element={<MentorDetail />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
