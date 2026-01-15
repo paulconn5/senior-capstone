@@ -5,10 +5,12 @@ import './Onboarding.css';
 // Degree options (students see as "Major", mentors see as "Primary Role / Title")
 const DEGREE_OPTIONS = [
     'Information Technology',
+    'Data Tech',
+    'Game Dev',
     'Computer Science',
     'Cybersecurity',
     'Data Science',
-    'Software Development',
+    'Software Application Development',
     'Networking & Systems',
     'Other'
 ];
