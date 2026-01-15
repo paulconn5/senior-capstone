@@ -1,0 +1,159 @@
+.mentor-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.mentor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.mentor-card-header {
+  height: 120px;
+  background: linear-gradient(135deg, #e00122 0%, #c00120 100%);
+}
+
+.mentor-card-body {
+  padding: 1.5rem;
+  position: relative;
+}
+
+.mentor-photo-wrapper {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid white;
+  overflow: hidden;
+  background-color: #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mentor-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mentor-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin: 3rem 0 1rem 0;
+}
+
+.mentor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.info-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  color: #e00122;
+}
+
+.info-text {
+  flex: 1;
+}
+
+.mentor-interests {
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+}
+
+.interests-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #666;
+  margin: 0 0 0.75rem 0;
+}
+
+.interests-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.interest-tag {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  background-color: #f0f0f0;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  color: #555;
+  font-weight: 500;
+}
+
+/* Different color variants for tags */
+.interest-tag:nth-child(4n+1) {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.interest-tag:nth-child(4n+2) {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.interest-tag:nth-child(4n+3) {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.interest-tag:nth-child(4n+4) {
+  background-color: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.interest-more {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  background-color: transparent;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.interest-more:hover {
+  background-color: #f5f5f5;
+  border-color: #e00122;
+  color: #e00122;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mentor-card-body {
+    padding: 1rem;
+  }
+
+  .mentor-name {
+    font-size: 1.1rem;
+  }
+
+  .info-item {
+    font-size: 0.85rem;
+  }
+}

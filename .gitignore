@@ -368,3 +368,6 @@ FodyWeavers.xsd
 .env.*.local
 **/.env
 **/.env.local
+
+# Claude Code settings
+.claude/
