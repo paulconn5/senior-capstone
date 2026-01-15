@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import './Onboarding.css';
 
-const STUDENT_MAJORS = [
+// Degree options (students see as "Major", mentors see as "Primary Role / Title")
+const DEGREE_OPTIONS = [
     'Information Technology',
     'Computer Science',
     'Cybersecurity',
@@ -12,17 +13,8 @@ const STUDENT_MAJORS = [
     'Other'
 ];
 
-const MENTOR_ROLES = [
-    'Software Engineer',
-    'Cybersecurity Analyst',
-    'Data Engineer / Scientist',
-    'Cloud / DevOps Engineer',
-    'IT Manager / Lead',
-    'Product Manager',
-    'Other'
-];
-
-const SKILL_OPTIONS = [
+// Tags / Skills / Interests
+const TAG_OPTIONS = [
     'JavaScript',
     'C# / .NET',
     'Python',
@@ -34,103 +26,60 @@ const SKILL_OPTIONS = [
     'Data Analytics',
     'DevOps / CI/CD',
     'UI/UX',
-    'Project Management'
-];
-
-const INTEREST_OPTIONS = [
+    'Project Management',
     'Web Development',
     'Mobile Development',
-    'Cloud Computing',
-    'Cybersecurity',
     'AI / Machine Learning',
-    'Data Science / Analytics',
     'Game Development',
     'IT Management / Leadership',
     'Research / Academia'
 ];
 
-const MEETING_FREQUENCY = [
-    'Once per month',
-    'Twice per month',
-    'Once per week',
-    'Multiple times per week'
-];
-
-const EXPERIENCE_LEVELS_STUDENT = [
-    'First-year / Exploring',
-    'Some coursework completed',
-    'Completed internships / co-ops',
-    'Near graduation, job searching'
-];
-
-const EXPERIENCE_LEVELS_MENTOR = [
-    '0–2 years (early career)',
-    '3–5 years',
-    '6–10 years',
-    '10+ years (senior / lead)'
-];
-
 function Onboarding() {
-    const [role, setRole] = useState('student'); // "student" or "mentor"
+    const [role, setRole] = useState('student'); // student or mentor
 
     const [formData, setFormData] = useState({
-        fullName: '',
+        first_name: '',
+        last_name: '',
         role: 'student',
-        major: '',
-        mentorRole: '',
-        graduationYear: '',
-        company: '',
-        yearsExperience: '',
-        skills: [],
-        interests: [],
-        meetingFrequency: '',
-        experienceLevel: '',
-        goals: ''
+        degree: '',
+        degree_level: '',
+        graduation_date: '',
+        tags: [],
+        about_me: ''
     });
 
+    // Role toggle handler
     function handleRoleChange(newRole) {
         setRole(newRole);
-        setFormData(prev => ({
-            ...prev,
-            role: newRole
-        }));
+        setFormData(prev => ({ ...prev, role: newRole }));
     }
 
+    // Standard input/select change
     function handleChange(e) {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     }
 
-    // multi-select change handler for <select multiple>
+    // Multi-select handler for tags
     function handleMultiSelectChange(e) {
         const { name, options } = e.target;
         const selected = Array.from(options)
             .filter(o => o.selected)
             .map(o => o.value);
-
-        setFormData(prev => ({
-            ...prev,
-            [name]: selected
-        }));
+        setFormData(prev => ({ ...prev, [name]: selected }));
     }
 
     function handleSubmit(e) {
         e.preventDefault();
-
         console.log('Onboarding submitted:', formData);
 
-        // TODO: send to backend later
+        // TODO: send to backend API
         // await fetch('/api/onboarding', { method: 'POST', ... })
 
         alert('Onboarding submitted (placeholder). Redirecting to dashboard...');
         window.location.href = '/dashboard';
     }
-
-    const experienceOptions =
-        role === 'student' ? EXPERIENCE_LEVELS_STUDENT : EXPERIENCE_LEVELS_MENTOR;
 
     return (
         <div className="onboard-container">
@@ -159,164 +108,93 @@ function Onboarding() {
 
             <form onSubmit={handleSubmit} className="onboard-form">
 
-                {/* Shared: Name */}
+                {/* First Name */}
                 <label>
-                    Full Name
+                    First Name
                     <input
-                        name="fullName"
-                        value={formData.fullName}
+                        name="first_name"
+                        value={formData.first_name}
                         onChange={handleChange}
                         required
                     />
                 </label>
 
-                {/* Student-only fields */}
-                {role === 'student' && (
-                    <>
-                        <label>
-                            Major
-                            <select
-                                name="major"
-                                value={formData.major}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Select your major</option>
-                                {STUDENT_MAJORS.map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <label>
-                            Expected Graduation Year
-                            <input
-                                type="number"
-                                name="graduationYear"
-                                value={formData.graduationYear}
-                                onChange={handleChange}
-                                placeholder="e.g. 2026"
-                                required
-                            />
-                        </label>
-                    </>
-                )}
-
-                {/* Mentor-only fields */}
-                {role === 'mentor' && (
-                    <>
-                        <label>
-                            Primary Role / Title
-                            <select
-                                name="mentorRole"
-                                value={formData.mentorRole}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Select your role</option>
-                                {MENTOR_ROLES.map(r => (
-                                    <option key={r} value={r}>{r}</option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <label>
-                            Company / Organization
-                            <input
-                                name="company"
-                                value={formData.company}
-                                onChange={handleChange}
-                                placeholder="Where do you work?"
-                                required
-                            />
-                        </label>
-
-                        <label>
-                            Years of Experience
-                            <input
-                                type="number"
-                                name="yearsExperience"
-                                value={formData.yearsExperience}
-                                onChange={handleChange}
-                                min="0"
-                                placeholder="e.g. 3"
-                            />
-                        </label>
-                    </>
-                )}
-
-                {/* Shared: Experience Level (but with different options per role) */}
+                {/* Last Name */}
                 <label>
-                    Experience Level
+                    Last Name
+                    <input
+                        name="last_name"
+                        value={formData.last_name}
+                        onChange={handleChange}
+                        required
+                    />
+                </label>
+
+                {/* Degree / Role */}
+                <label>
+                    {role === 'student' ? 'Major' : 'Primary Role / Title'}
                     <select
-                        name="experienceLevel"
-                        value={formData.experienceLevel}
+                        name="degree"
+                        value={formData.degree}
                         onChange={handleChange}
                         required
                     >
                         <option value="">Select one</option>
-                        {experienceOptions.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                        ))}
+                        {DEGREE_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                 </label>
 
-                {/* Skills multi-select */}
+                {/* Degree Level */}
                 <label>
-                    Key Skills (select all that apply)
+                    Degree Level
                     <select
-                        name="skills"
+                        name="degree_level"
+                        value={formData.degree_level}
+                        onChange={handleChange}
+                        required
+                    >
+                        <option value="">Select one</option>
+                        <option value="Associates">Associates</option>
+                        <option value="Bachelors">Bachelors</option>
+                        <option value="Masters">Masters</option>
+                        <option value="PhD">PhD</option>
+                    </select>
+                </label>
+
+                {/* Graduation Year */}
+                <label>
+                    {role === 'student' ? 'Expected Graduation Year' : 'Graduation Year'}
+                    <input
+                        type="number"
+                        name="graduation_date"
+                        value={formData.graduation_date}
+                        onChange={handleChange}
+                        placeholder="e.g. 2026"
+                        required
+                    />
+                </label>
+
+                {/* Tags (Skills / Interests) */}
+                <label>
+                    {role === 'student' ? 'Interests (select all that apply)' : 'Skills (select all that apply)'}
+                    <select
+                        name="tags"
                         multiple
-                        value={formData.skills}
+                        value={formData.tags}
                         onChange={handleMultiSelectChange}
                         size={5}
                     >
-                        {SKILL_OPTIONS.map(skill => (
-                            <option key={skill} value={skill}>{skill}</option>
-                        ))}
+                        {TAG_OPTIONS.map(tag => <option key={tag} value={tag}>{tag}</option>)}
                     </select>
                     <span className="hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</span>
                 </label>
 
-                {/* Interests multi-select */}
-                <label>
-                    Interests (select all that apply)
-                    <select
-                        name="interests"
-                        multiple
-                        value={formData.interests}
-                        onChange={handleMultiSelectChange}
-                        size={5}
-                    >
-                        {INTEREST_OPTIONS.map(interest => (
-                            <option key={interest} value={interest}>{interest}</option>
-                        ))}
-                    </select>
-                    <span className="hint">These help us match you with similar focus areas.</span>
-                </label>
-
-                {/* Meeting frequency */}
-                <label>
-                    Preferred Meeting Frequency
-                    <select
-                        name="meetingFrequency"
-                        value={formData.meetingFrequency}
-                        onChange={handleChange}
-                        required
-                    >
-                        <option value="">Select how often</option>
-                        {MEETING_FREQUENCY.map(freq => (
-                            <option key={freq} value={freq}>{freq}</option>
-                        ))}
-                    </select>
-                </label>
-
-                {/* Goals (free text but still part of matching) */}
+                {/* About Me / Goals */}
                 <label>
                     What are your goals for this mentorship?
                     <textarea
-                        name="goals"
-                        value={formData.goals}
+                        name="about_me"
+                        value={formData.about_me}
                         onChange={handleChange}
                         placeholder={
                             role === 'student'
@@ -327,9 +205,8 @@ function Onboarding() {
                     />
                 </label>
 
-                <button type="submit" className="submit-btn">
-                    Continue
-                </button>
+                {/* Submit Button */}
+                <button type="submit" className="submit-btn">Continue</button>
             </form>
         </div>
     );
