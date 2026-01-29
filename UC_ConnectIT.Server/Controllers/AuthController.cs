@@ -1,4 +1,5 @@
 ﻿using BCrypt.Net;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UC_ConnectIT.Server.Data;
@@ -19,7 +20,7 @@ namespace UC_ConnectIT.Server.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterRequest request)
+        public async Task<IActionResult> Register(RegisterDTO request)
         {
             if (await _db.Users.AnyAsync(u => u.Email == request.Email))
                 return BadRequest("Email already exists.");
@@ -28,8 +29,12 @@ namespace UC_ConnectIT.Server.Controllers
             {
                 Email = request.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                FullName = request.FullName,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
                 Role = request.Role,
+                Degree = request.Degree,
+                DegreeLevel = request.DegreeLevel,
+                GraduationDate = request.GraduationDate,
                 IsEmailVerified = false
             };
 
@@ -39,8 +44,9 @@ namespace UC_ConnectIT.Server.Controllers
             return Ok("User registered.");
         }
 
+
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginRequest request)
+        public async Task<IActionResult> Login(LoginDTO request)
         {
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user == null)
@@ -53,7 +59,8 @@ namespace UC_ConnectIT.Server.Controllers
             {
                 user.Id,
                 user.Email,
-                user.FullName,
+                user.FirstName,
+                user.LastName,
                 user.Role
             });
         }
