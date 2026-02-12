@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import './Onboarding.css';
 
-// Degree options (students see as "Major", mentors see as "Primary Role / Title")
 const DEGREE_OPTIONS = [
     'Information Technology',
     'Data Tech',
@@ -15,7 +14,6 @@ const DEGREE_OPTIONS = [
     'Other'
 ];
 
-// Tags / Skills / Interests
 const TAG_OPTIONS = [
     'JavaScript',
     'C# / .NET',
@@ -38,11 +36,15 @@ const TAG_OPTIONS = [
 ];
 
 function Onboarding() {
-    const [role, setRole] = useState('student'); // student or mentor
+    const [role, setRole] = useState('student');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
+        email: '',
+        password: '',
         role: 'student',
         degree: '',
         degree_level: '',
@@ -51,36 +53,73 @@ function Onboarding() {
         about_me: ''
     });
 
-    // Role toggle handler
     function handleRoleChange(newRole) {
         setRole(newRole);
         setFormData(prev => ({ ...prev, role: newRole }));
     }
 
-    // Standard input/select change
     function handleChange(e) {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     }
 
-    // Multi-select handler for tags
     function handleMultiSelectChange(e) {
-        const { name, options } = e.target;
+        const { options } = e.target;
         const selected = Array.from(options)
             .filter(o => o.selected)
             .map(o => o.value);
-        setFormData(prev => ({ ...prev, [name]: selected }));
+        setFormData(prev => ({ ...prev, tags: selected }));
     }
 
-    function handleSubmit(e) {
+    async function handleSubmit(e) {
         e.preventDefault();
-        console.log('Onboarding submitted:', formData);
+        setError('');
+        setLoading(true);
 
-        // TODO: send to backend API
-        // await fetch('/api/onboarding', { method: 'POST', ... })
+        try {
+            const response = await fetch('https://localhost:7068/api/auth/onboarding', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: formData.email,
+                    password: formData.password,
+                    firstName: formData.first_name,
+                    lastName: formData.last_name,
+                    role: formData.role,
+                    degree: formData.degree,
+                    degreeLevel: formData.degree_level,
+                    graduationDate: formData.graduation_date,
+                    aboutMe: formData.about_me,
+                    tags: formData.tags
+                })
+            });
 
-        alert('Onboarding submitted (placeholder). Redirecting to dashboard...');
-        window.location.href = '/dashboard';
+            let data;
+            try {
+                data = await response.json(); // try parsing JSON
+            } catch {
+                data = null;
+            }
+
+            // Debug logs
+            console.log('Status:', response.status);
+            console.log('OK:', response.ok);
+            console.log('Response body:', data);
+
+            if (!response.ok) {
+                setError(data?.message || `Server responded with status ${response.status}`);
+                setLoading(false);
+                return;
+            }
+
+            alert(data?.message || 'Onboarding complete! Redirecting to dashboard...');
+            window.location.href = '/dashboard';
+        } catch (err) {
+            console.error('Fetch error:', err);
+            setError('Failed to submit onboarding. Check console for details.');
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
@@ -90,7 +129,6 @@ function Onboarding() {
                 Tell us about yourself so we can match you with the right {role === 'student' ? 'mentor' : 'students'}.
             </p>
 
-            {/* Role Selector */}
             <div className="role-toggle">
                 <button
                     type="button"
@@ -109,52 +147,26 @@ function Onboarding() {
             </div>
 
             <form onSubmit={handleSubmit} className="onboard-form">
-
-                {/* First Name */}
-                <label>
-                    First Name
-                    <input
-                        name="first_name"
-                        value={formData.first_name}
-                        onChange={handleChange}
-                        required
-                    />
+                <label>Email
+                    <input name="email" type="email" value={formData.email} onChange={handleChange} required />
                 </label>
-
-                {/* Last Name */}
-                <label>
-                    Last Name
-                    <input
-                        name="last_name"
-                        value={formData.last_name}
-                        onChange={handleChange}
-                        required
-                    />
+                <label>Password
+                    <input name="password" type="password" value={formData.password} onChange={handleChange} required />
                 </label>
-
-                {/* Degree / Role */}
-                <label>
-                    {role === 'student' ? 'Major' : 'Primary Role / Title'}
-                    <select
-                        name="degree"
-                        value={formData.degree}
-                        onChange={handleChange}
-                        required
-                    >
+                <label>First Name
+                    <input name="first_name" value={formData.first_name} onChange={handleChange} required />
+                </label>
+                <label>Last Name
+                    <input name="last_name" value={formData.last_name} onChange={handleChange} required />
+                </label>
+                <label>{role === 'student' ? 'Major' : 'Primary Role / Title'}
+                    <select name="degree" value={formData.degree} onChange={handleChange} required>
                         <option value="">Select one</option>
                         {DEGREE_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                 </label>
-
-                {/* Degree Level */}
-                <label>
-                    Degree Level
-                    <select
-                        name="degree_level"
-                        value={formData.degree_level}
-                        onChange={handleChange}
-                        required
-                    >
+                <label>Degree Level
+                    <select name="degree_level" value={formData.degree_level} onChange={handleChange} required>
                         <option value="">Select one</option>
                         <option value="Associates">Associates</option>
                         <option value="Bachelors">Bachelors</option>
@@ -162,53 +174,27 @@ function Onboarding() {
                         <option value="PhD">PhD</option>
                     </select>
                 </label>
-
-                {/* Graduation Year */}
-                <label>
-                    {role === 'student' ? 'Expected Graduation Year' : 'Graduation Year'}
-                    <input
-                        type="number"
-                        name="graduation_date"
-                        value={formData.graduation_date}
-                        onChange={handleChange}
-                        placeholder="e.g. 2026"
-                        required
-                    />
+                <label>{role === 'student' ? 'Expected Graduation Year' : 'Graduation Year'}
+                    <input type="number" name="graduation_date" value={formData.graduation_date} onChange={handleChange} placeholder="e.g. 2026" required />
                 </label>
-
-                {/* Tags (Skills / Interests) */}
-                <label>
-                    {role === 'student' ? 'Interests (select all that apply)' : 'Skills (select all that apply)'}
-                    <select
-                        name="tags"
-                        multiple
-                        value={formData.tags}
-                        onChange={handleMultiSelectChange}
-                        size={5}
-                    >
+                <label>{role === 'student' ? 'Interests (select all that apply)' : 'Skills (select all that apply)'}
+                    <select name="tags" multiple value={formData.tags} onChange={handleMultiSelectChange} size={5}>
                         {TAG_OPTIONS.map(tag => <option key={tag} value={tag}>{tag}</option>)}
                     </select>
                     <span className="hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</span>
                 </label>
-
-                {/* About Me / Goals */}
-                <label>
-                    What are your goals for this mentorship?
-                    <textarea
-                        name="about_me"
-                        value={formData.about_me}
-                        onChange={handleChange}
-                        placeholder={
-                            role === 'student'
-                                ? 'Example: I want guidance on internships, career paths, and technical interview prep.'
-                                : 'Example: I want to support students, give career advice, and grow my leadership skills.'
-                        }
-                        rows={3}
-                    />
+                <label>What are your goals for this mentorship?
+                    <textarea name="about_me" value={formData.about_me} onChange={handleChange} rows={3}
+                        placeholder={role === 'student'
+                            ? 'Example: I want guidance on internships, career paths, and technical interview prep.'
+                            : 'Example: I want to support students, give career advice, and grow my leadership skills.'} />
                 </label>
 
-                {/* Submit Button */}
-                <button type="submit" className="submit-btn">Continue</button>
+                {error && <p className="error">{error}</p>}
+
+                <button type="submit" className="submit-btn" disabled={loading}>
+                    {loading ? 'Submitting...' : 'Continue'}
+                </button>
             </form>
         </div>
     );

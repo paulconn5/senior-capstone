@@ -28,10 +28,13 @@ namespace UC_ConnectIT.Server.Models
 
         public string? DegreeLevel { get; set; } // Associates, Bachelors, Masters, PhD
 
-        public DateTime? GraduationDate { get; set; }
+        public int? GraduationDate { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public bool IsEmailVerified { get; set; } = false; // not in DB but used for auth
+        public bool IsEmailVerified { get; set; } = false;
+
+        public ICollection<UserTag> UserTags { get; set; } = new List<UserTag>();
+
     }
 }
