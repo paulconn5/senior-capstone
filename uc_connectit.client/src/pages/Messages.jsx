@@ -1,90 +1,135 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { HiMagnifyingGlass, HiEllipsisVertical, HiPaperAirplane } from 'react-icons/hi2'
+import { HiUser } from 'react-icons/hi2'
 import Navbar from '../components/Navbar'
 import './Messages.css'
 
+const API_BASE = 'https://localhost:7068'
+
 function Messages() {
-  const [selectedConversation, setSelectedConversation] = useState(1)
+  const [selectedConversation, setSelectedConversation] = useState(null)
   const [messageText, setMessageText] = useState('')
+  const [conversations, setConversations] = useState([])
+  const [messages, setMessages] = useState([])
+  const [connection, setConnection] = useState(null)
+  const messagesEndRef = useRef(null)
+  const selectedConversationRef = useRef(null)
 
-  const conversations = [
-    {
-      id: 1,
-      name: 'David Miller',
-      photo: 'https://via.placeholder.com/50',
-      preview: 'I\'d be happy to help you explore...',
-      time: '5m ago',
-      unread: true,
-      online: true
-    },
-    {
-      id: 2,
-      name: 'Marcus Johnson',
-      photo: 'https://via.placeholder.com/50',
-      preview: 'Let\'s schedule a call for next week ...',
-      time: '1h ago',
-      unread: false,
-      online: false
-    },
-    {
-      id: 3,
-      name: 'Emily Rodriguez',
-      photo: 'https://via.placeholder.com/50',
-      preview: 'I can share some design resources ...',
-      time: '3h ago',
-      unread: false,
-      online: false
-    },
-    {
-      id: 4,
-      name: 'Priya Patel',
-      photo: 'https://via.placeholder.com/50',
-      preview: 'Great meeting you at the networki...',
-      time: '1d ago',
-      unread: false,
-      online: false
+  const user = JSON.parse(localStorage.getItem('user'))
+
+  // Keep ref in sync so the SignalR callback always sees the latest value
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation
+  }, [selectedConversation])
+
+  // Load conversations on mount
+  useEffect(() => {
+    if (!user) return
+    fetch(`${API_BASE}/api/messages/conversations?userId=${user.id}`)
+      .then(res => res.json())
+      .then(data => setConversations(data))
+  }, [])
+
+  // Set up SignalR connection on mount
+  useEffect(() => {
+    if (!user) return
+
+    const conn = new HubConnectionBuilder()
+      .withUrl(`${API_BASE}/chathub`)
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Information)
+      .build()
+
+    conn.on('ReceiveMessage', (msg) => {
+      // If this message is for the currently selected conversation, add it to the chat
+      if (msg.conversationId === selectedConversationRef.current) {
+        setMessages(prev => [...prev, msg])
+      }
+
+      // Update conversation list preview
+      setConversations(prev => prev.map(c =>
+        c.id === msg.conversationId
+          ? {
+              ...c,
+              lastMessage: msg.content,
+              lastMessageAt: msg.sentAt,
+              unreadCount: msg.conversationId === selectedConversationRef.current
+                ? c.unreadCount
+                : c.unreadCount + 1
+            }
+          : c
+      ))
+    })
+
+    conn.start().then(() => setConnection(conn))
+
+    return () => { conn.stop() }
+  }, [])
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const handleSelectConversation = async (convoId) => {
+    // Leave previous group
+    if (selectedConversation && connection) {
+      await connection.invoke('LeaveConversation', selectedConversation)
     }
-  ]
 
-  const messages = [
-    {
-      id: 1,
-      sender: 'other',
-      text: 'Hi Daniel! I saw your mentorship request. I\'d be happy to help you explore cybersecurity career paths and co-op opportunities. What specific areas of cybersecurity interest you most?',
-      time: '9:15 AM'
-    },
-    {
-      id: 2,
-      sender: 'me',
-      text: 'Hi David! Thank you so much for reaching out. I\'m interested in learning more about network security and ethical hacking. I\'m also really struggling to find a co-op and would love guidance on what companies look for.',
-      time: '9:22 AM'
-    },
-    {
-      id: 3,
-      sender: 'other',
-      text: 'Those are great areas to focus on! Network security and ethical hacking are in high demand. At Great American Insurance Group, we have several entry-level positions for students like you. Let\'s schedule a call this week to discuss your goals and I can share some insights about our co-op program.',
-      time: '9:28 AM'
-    },
-    {
-      id: 4,
-      sender: 'me',
-      text: 'That would be amazing! I\'m available any day after 3pm. Looking forward to learning from your experience.',
-      time: '9:35 AM'
-    },
-    {
-      id: 5,
-      sender: 'other',
-      text: 'Perfect! How about Thursday at 4pm? I\'ll send you a calendar invite. In the meantime, check out SANS and CompTIA certifications - they\'re great starting points for cybersecurity.',
-      time: '9:40 AM'
+    setSelectedConversation(convoId)
+
+    // Fetch message history
+    const res = await fetch(
+      `${API_BASE}/api/messages/conversations/${convoId}?userId=${user.id}`
+    )
+    const data = await res.json()
+    setMessages(data)
+
+    // Reset unread count for this conversation
+    setConversations(prev => prev.map(c =>
+      c.id === convoId ? { ...c, unreadCount: 0 } : c
+    ))
+
+    // Join new group
+    if (connection) {
+      await connection.invoke('JoinConversation', convoId)
     }
-  ]
+  }
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault()
-    if (messageText.trim()) {
-      console.log('Sending message:', messageText)
-      setMessageText('')
-    }
+    if (!messageText.trim() || !connection || !selectedConversation) return
+
+    await connection.invoke('SendMessage', {
+      senderId: user.id,
+      conversationId: selectedConversation,
+      content: messageText
+    })
+
+    setMessageText('')
+  }
+
+  const formatTime = (dateString) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now - date
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString()
+  }
+
+  const formatMessageTime = (dateString) => {
+    if (!dateString) return ''
+    return new Date(dateString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
   }
 
   const selectedConv = conversations.find(c => c.id === selectedConversation)
@@ -111,24 +156,34 @@ function Messages() {
             </div>
 
             <div className="conversations-list">
+              {conversations.length === 0 && (
+                <div className="no-conversation-selected" style={{ padding: '2rem', textAlign: 'center' }}>
+                  <p>No conversations yet</p>
+                </div>
+              )}
               {conversations.map((conversation) => (
                 <div
                   key={conversation.id}
                   className={`conversation-item ${selectedConversation === conversation.id ? 'active' : ''}`}
-                  onClick={() => setSelectedConversation(conversation.id)}
+                  onClick={() => handleSelectConversation(conversation.id)}
                 >
                   <div className="conversation-avatar">
-                    <img src={conversation.photo} alt={conversation.name} />
-                    {conversation.online && <span className="online-indicator"></span>}
+                    <div className="avatar-placeholder">
+                      <HiUser />
+                    </div>
                   </div>
                   <div className="conversation-info">
                     <div className="conversation-header">
-                      <h3>{conversation.name}</h3>
-                      <span className="conversation-time">{conversation.time}</span>
+                      <h3>{conversation.otherUserName}</h3>
+                      <span className="conversation-time">
+                        {formatTime(conversation.lastMessageAt)}
+                      </span>
                     </div>
-                    <p className="conversation-preview">{conversation.preview}</p>
+                    <p className="conversation-preview">
+                      {conversation.lastMessage || 'No messages yet'}
+                    </p>
                   </div>
-                  {conversation.unread && <div className="unread-badge"></div>}
+                  {conversation.unreadCount > 0 && <div className="unread-badge"></div>}
                 </div>
               ))}
             </div>
@@ -141,14 +196,12 @@ function Messages() {
                 <div className="chat-header">
                   <div className="chat-user-info">
                     <div className="chat-avatar">
-                      <img src={selectedConv.photo} alt={selectedConv.name} />
-                      {selectedConv.online && <span className="online-indicator"></span>}
+                      <div className="avatar-placeholder">
+                        <HiUser />
+                      </div>
                     </div>
                     <div>
-                      <h2>{selectedConv.name}</h2>
-                      <p className="online-status">
-                        {selectedConv.online ? 'Online' : 'Offline'}
-                      </p>
+                      <h2>{selectedConv.otherUserName}</h2>
                     </div>
                   </div>
                   <button className="more-options">
@@ -160,14 +213,15 @@ function Messages() {
                   {messages.map((message) => (
                     <div
                       key={message.id}
-                      className={`message ${message.sender === 'me' ? 'message-sent' : 'message-received'}`}
+                      className={`message ${message.senderId === user.id ? 'message-sent' : 'message-received'}`}
                     >
                       <div className="message-bubble">
-                        <p>{message.text}</p>
+                        <p>{message.content}</p>
                       </div>
-                      <span className="message-time">{message.time}</span>
+                      <span className="message-time">{formatMessageTime(message.sentAt)}</span>
                     </div>
                   ))}
+                  <div ref={messagesEndRef} />
                 </div>
 
                 <form className="message-input-area" onSubmit={handleSendMessage}>

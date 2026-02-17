@@ -27,13 +27,20 @@ function Login() {
 
     setIsLoading(true)
 
-    // Placeholder for authentication logic
     try {
-      console.log('Login attempt:', { email, password: '***' })
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await fetch('https://localhost:7068/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
 
-      // Redirect to 404 page after successful login
+      if (!response.ok) {
+        setError('Invalid email or password.')
+        return
+      }
+
+      const user = await response.json()
+      localStorage.setItem('user', JSON.stringify(user))
       navigate('/dashboard')
     } catch (err) {
       setError('Login failed. Please try again.')

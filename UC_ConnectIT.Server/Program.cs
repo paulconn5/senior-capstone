@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using UC_ConnectIT.Server.Data;
+using UC_ConnectIT.Server.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -18,7 +20,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:5173") // React dev server
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -40,6 +43,7 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/chathub");
 
 app.MapFallbackToFile("/index.html");
 
