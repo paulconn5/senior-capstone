@@ -54,8 +54,13 @@ function Login() {
                 return
             }
 
-            // Verified user
-            localStorage.setItem('user', JSON.stringify(data))
+            // Verified user: store token + user
+            if (data.token) {
+                localStorage.setItem('token', data.token)
+            }
+            if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user))
+            }
             navigate('/dashboard')
 
         } catch (err) {
@@ -102,8 +107,15 @@ function Login() {
                 return
             }
 
-            const user = await loginResponse.json()
-            localStorage.setItem('user', JSON.stringify(user))
+            const userData = await loginResponse.json()
+
+            if (userData.token) {
+                localStorage.setItem('token', userData.token)
+            }
+            if (userData.user) {
+                localStorage.setItem('user', JSON.stringify(userData.user))
+            }
+
             navigate('/dashboard')
 
         } catch {

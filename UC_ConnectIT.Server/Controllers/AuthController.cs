@@ -1,7 +1,11 @@
-﻿using BCrypt.Net;
-using Microsoft.AspNetCore.Identity.Data;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using BCrypt.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using UC_ConnectIT.Server.Data;
 using UC_ConnectIT.Server.DTOs;
 using UC_ConnectIT.Server.Models;
@@ -13,10 +17,12 @@ namespace UC_ConnectIT.Server.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly IConfiguration _config;
 
-        public AuthController(AppDbContext db)
+        public AuthController(AppDbContext db, IConfiguration config)
         {
             _db = db;
+            _config = config;
         }
 
         [HttpPost("onboarding")]
@@ -51,16 +57,14 @@ namespace UC_ConnectIT.Server.Controllers
                 {
                     foreach (var tagName in request.Tags)
                     {
-                        // Check if tag exists
                         var tag = await _db.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
                         if (tag == null)
                         {
                             tag = new Tag { Name = tagName };
                             _db.Tags.Add(tag);
-                            await _db.SaveChangesAsync(); // generate tag.Id
+                            await _db.SaveChangesAsync();
                         }
 
-                        // Create UserTag link
                         var userTag = new UserTag
                         {
                             UserId = user.Id,
@@ -84,8 +88,6 @@ namespace UC_ConnectIT.Server.Controllers
 
                 await _db.SaveChangesAsync();
 
-
-
                 return Ok(new
                 {
                     message = "User registered successfully.",
@@ -94,14 +96,10 @@ namespace UC_ConnectIT.Server.Controllers
             }
             catch (Exception ex)
             {
-                // Log error
                 Console.WriteLine(ex);
                 return StatusCode(500, new { message = "Registration failed.", details = ex.Message });
             }
         }
-
-
-
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDTO request)
@@ -125,15 +123,47 @@ namespace UC_ConnectIT.Server.Controllers
                 });
             }
 
-            // Verified users
+            // Generate JWT
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+                new Claim(ClaimTypes.Role, user.Role ?? "student")
+            };
+
+            var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
+
+            var expireMinutes = 60;
+            int.TryParse(_config["Jwt:ExpireMinutes"], out expireMinutes);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddMinutes(expireMinutes),
+                Issuer = _config["Jwt:Issuer"],
+                Audience = _config["Jwt:Audience"],
+                SigningCredentials = creds
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var jwt = tokenHandler.WriteToken(token);
+
+            // Return token and user info
             return Ok(new
             {
                 requiresVerification = false,
-                user.Id,
-                user.Email,
-                user.FirstName,
-                user.LastName,
-                user.Role
+                token = jwt,
+                user = new
+                {
+                    Id = user.Id,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    user.Role
+                }
             });
         }
 
@@ -157,6 +187,5 @@ namespace UC_ConnectIT.Server.Controllers
 
             return Ok(new { message = "Account verified successfully." });
         }
-
     }
 }
