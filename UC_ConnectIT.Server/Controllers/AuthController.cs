@@ -73,7 +73,8 @@ namespace UC_ConnectIT.Server.Controllers
                 }
 
                 // Create email verification token
-                var token = Guid.NewGuid().ToString();
+                var random = new Random();
+                var token = random.Next(100000, 999999).ToString();
                 _db.EmailVerificationTokens.Add(new EmailVerificationToken
                 {
                     UserId = user.Id,
@@ -83,11 +84,13 @@ namespace UC_ConnectIT.Server.Controllers
 
                 await _db.SaveChangesAsync();
 
-                // 5️⃣ For testing: output link in console
-                Console.WriteLine($"Verification link: https://localhost:5173/verify-email?token={token}");
 
-                
-                return Ok(new { message = "User registered. Check email to verify account." });
+
+                return Ok(new
+                {
+                    message = "User registered successfully.",
+                    verificationToken = token
+                });
             }
             catch (Exception ex)
             {
@@ -103,15 +106,29 @@ namespace UC_ConnectIT.Server.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDTO request)
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => u.Email == request.Email);
+
             if (user == null)
-                return Unauthorized("Invalid credentials.");
+                return Unauthorized(new { message = "Invalid credentials." });
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                return Unauthorized("Invalid credentials.");
+                return Unauthorized(new { message = "Invalid credentials." });
 
+            // If not verified, require verification
+            if (!user.IsEmailVerified)
+            {
+                return Ok(new
+                {
+                    requiresVerification = true,
+                    userId = user.Id
+                });
+            }
+
+            // Verified users
             return Ok(new
             {
+                requiresVerification = false,
                 user.Id,
                 user.Email,
                 user.FirstName,
@@ -120,26 +137,25 @@ namespace UC_ConnectIT.Server.Controllers
             });
         }
 
-        [HttpGet("verify-email")]
-        public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+        [HttpPost("verify-token")]
+        public async Task<IActionResult> VerifyToken([FromBody] VerifyTokenDTO request)
         {
-            //Find the token in the database
             var tokenEntry = await _db.EmailVerificationTokens
                 .Include(t => t.User)
-                .FirstOrDefaultAsync(t => t.Token == token);
+                .FirstOrDefaultAsync(t =>
+                    t.UserId == request.UserId &&
+                    t.Token == request.Token);
 
             if (tokenEntry == null || tokenEntry.ExpiresAt < DateTime.UtcNow)
-                return BadRequest("Invalid or expired token");
+                return BadRequest(new { message = "Invalid or expired token." });
 
-            // Mark the user as verified
             tokenEntry.User.IsEmailVerified = true;
 
-            // delete the token now that it's used
             _db.EmailVerificationTokens.Remove(tokenEntry);
 
             await _db.SaveChangesAsync();
 
-            return Ok(new { message = "Email verified successfully." });
+            return Ok(new { message = "Account verified successfully." });
         }
 
     }
