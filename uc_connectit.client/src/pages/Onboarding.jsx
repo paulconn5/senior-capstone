@@ -12,7 +12,7 @@ const DEGREE_OPTIONS = [
     'Software Application Development',
     'Networking & Systems',
     'Other'
-];
+]; 
 
 const TAG_OPTIONS = [
     'JavaScript',
@@ -112,8 +112,8 @@ function Onboarding() {
                 return;
             }
 
-            alert(data?.message || 'Onboarding complete! Redirecting to dashboard...');
-            window.location.href = '/dashboard';
+            alert(`Onboarding complete!\nYour verification token is: ${data.verificationToken}`);
+            window.location.href = '/';
         } catch (err) {
             console.error('Fetch error:', err);
             setError('Failed to submit onboarding. Check console for details.');

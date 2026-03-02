@@ -1,7 +1,11 @@
-﻿using BCrypt.Net;
-using Microsoft.AspNetCore.Identity.Data;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using BCrypt.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using UC_ConnectIT.Server.Data;
 using UC_ConnectIT.Server.DTOs;
 using UC_ConnectIT.Server.Models;
@@ -13,10 +17,12 @@ namespace UC_ConnectIT.Server.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly IConfiguration _config;
 
-        public AuthController(AppDbContext db)
+        public AuthController(AppDbContext db, IConfiguration config)
         {
             _db = db;
+            _config = config;
         }
 
         [HttpPost("onboarding")]
@@ -51,16 +57,14 @@ namespace UC_ConnectIT.Server.Controllers
                 {
                     foreach (var tagName in request.Tags)
                     {
-                        // Check if tag exists
                         var tag = await _db.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
                         if (tag == null)
                         {
                             tag = new Tag { Name = tagName };
                             _db.Tags.Add(tag);
-                            await _db.SaveChangesAsync(); // generate tag.Id
+                            await _db.SaveChangesAsync();
                         }
 
-                        // Create UserTag link
                         var userTag = new UserTag
                         {
                             UserId = user.Id,
@@ -73,7 +77,8 @@ namespace UC_ConnectIT.Server.Controllers
                 }
 
                 // Create email verification token
-                var token = Guid.NewGuid().ToString();
+                var random = new Random();
+                var token = random.Next(100000, 999999).ToString();
                 _db.EmailVerificationTokens.Add(new EmailVerificationToken
                 {
                     UserId = user.Id,
@@ -83,64 +88,104 @@ namespace UC_ConnectIT.Server.Controllers
 
                 await _db.SaveChangesAsync();
 
-                // 5️⃣ For testing: output link in console
-                Console.WriteLine($"Verification link: https://localhost:5173/verify-email?token={token}");
-
-                
-                return Ok(new { message = "User registered. Check email to verify account." });
+                return Ok(new
+                {
+                    message = "User registered successfully.",
+                    verificationToken = token
+                });
             }
             catch (Exception ex)
             {
-                // Log error
                 Console.WriteLine(ex);
                 return StatusCode(500, new { message = "Registration failed.", details = ex.Message });
             }
         }
 
-
-
-
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDTO request)
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => u.Email == request.Email);
+
             if (user == null)
-                return Unauthorized("Invalid credentials.");
+                return Unauthorized(new { message = "Invalid credentials." });
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                return Unauthorized("Invalid credentials.");
+                return Unauthorized(new { message = "Invalid credentials." });
 
+            // If not verified, require verification
+            if (!user.IsEmailVerified)
+            {
+                return Ok(new
+                {
+                    requiresVerification = true,
+                    userId = user.Id
+                });
+            }
+
+            // Generate JWT
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+                new Claim(ClaimTypes.Role, user.Role ?? "student")
+            };
+
+            var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
+
+            var expireMinutes = 60;
+            int.TryParse(_config["Jwt:ExpireMinutes"], out expireMinutes);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddMinutes(expireMinutes),
+                Issuer = _config["Jwt:Issuer"],
+                Audience = _config["Jwt:Audience"],
+                SigningCredentials = creds
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var jwt = tokenHandler.WriteToken(token);
+
+            // Return token and user info
             return Ok(new
             {
-                user.Id,
-                user.Email,
-                user.FirstName,
-                user.LastName,
-                user.Role
+                requiresVerification = false,
+                token = jwt,
+                user = new
+                {
+                    Id = user.Id,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    user.Role
+                }
             });
         }
 
-        [HttpGet("verify-email")]
-        public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+        [HttpPost("verify-token")]
+        public async Task<IActionResult> VerifyToken([FromBody] VerifyTokenDTO request)
         {
-            //Find the token in the database
             var tokenEntry = await _db.EmailVerificationTokens
                 .Include(t => t.User)
-                .FirstOrDefaultAsync(t => t.Token == token);
+                .FirstOrDefaultAsync(t =>
+                    t.UserId == request.UserId &&
+                    t.Token == request.Token);
 
             if (tokenEntry == null || tokenEntry.ExpiresAt < DateTime.UtcNow)
-                return BadRequest("Invalid or expired token");
+                return BadRequest(new { message = "Invalid or expired token." });
 
-            // Mark the user as verified
             tokenEntry.User.IsEmailVerified = true;
 
-            // delete the token now that it's used
             _db.EmailVerificationTokens.Remove(tokenEntry);
 
             await _db.SaveChangesAsync();
 
-            return Ok(new { message = "Email verified successfully." });
+            return Ok(new { message = "Account verified successfully." });
         }
-
     }
 }

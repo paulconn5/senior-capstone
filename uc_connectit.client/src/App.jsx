@@ -9,6 +9,7 @@ import Messages from './pages/Messages'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 import Onboarding from './pages/Onboarding'
+import PrivateRoute from './components/PrivateRoute'
 import './styles/App.css'  // or './App.css' if that's where it actually is
 
 const GOOGLE_CLIENT_ID =
@@ -20,12 +21,47 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Login />} />
-          <Route path="/dashboard" element={<MentorMatch />} />
-          <Route path="/mentor/:id" element={<MentorDetail />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <MentorMatch />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/mentor/:id"
+            element={
+              <PrivateRoute>
+                <MentorDetail />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <Profile />
+              </PrivateRoute>
+            }
+          />
           <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route
+            path="/messages"
+            element={
+              <PrivateRoute>
+                <Messages />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
