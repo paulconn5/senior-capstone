@@ -111,6 +111,13 @@ function Login() {
             width="100%"
           />
         </div>
+
+        <div className="register-section">
+          <p>Don't have an account?</p>
+          <button className="register-button" onClick={() => navigate('/onboarding')}>
+            Register
+          </button>
+        </div>
       </div>
     </div>
   )

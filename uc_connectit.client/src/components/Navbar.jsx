@@ -1,9 +1,15 @@
-import { Link, useLocation } from 'react-router-dom'
-import { HiHome, HiUser, HiChatBubbleLeftRight, HiCog6Tooth } from 'react-icons/hi2'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { HiHome, HiUser, HiChatBubbleLeftRight, HiCog6Tooth, HiArrowRightOnRectangle } from 'react-icons/hi2'
 import './Navbar.css'
 
 function Navbar() {
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    localStorage.removeItem('user')
+    navigate('/')
+  }
 
   const navItems = [
     { path: '/dashboard', label: 'Home', Icon: HiHome },
@@ -46,6 +52,9 @@ function Navbar() {
             <p className="user-name">Daniel Thompson</p>
             <p className="user-role">Cybersecurity Student</p>
           </div>
+          <button className="logout-button" onClick={handleLogout} title="Logout">
+            <HiArrowRightOnRectangle />
+          </button>
         </div>
       </div>
     </nav>
