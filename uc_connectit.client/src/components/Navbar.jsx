@@ -1,13 +1,16 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { HiHome, HiUser, HiChatBubbleLeftRight, HiCog6Tooth, HiArrowRightOnRectangle } from 'react-icons/hi2'
 import './Navbar.css'
+import useAuth from '../hooks/useAuth'
 
 function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { profile, loading } = useAuth()
 
   const handleLogout = () => {
     localStorage.removeItem('user')
+    localStorage.removeItem('token')
     navigate('/')
   }
 
@@ -19,6 +22,14 @@ function Navbar() {
   ]
 
   const isActive = (path) => location.pathname === path
+
+  const displayName = loading
+    ? 'Loading...'
+    : profile
+    ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
+    : 'Guest'
+
+  const displayRole = loading ? '' : profile?.role ? `${profile.role}` : ''
 
   return (
     <nav className="navbar">
@@ -49,8 +60,8 @@ function Navbar() {
             <HiUser />
           </div>
           <div className="user-info">
-            <p className="user-name">Daniel Thompson</p>
-            <p className="user-role">Cybersecurity Student</p>
+            <p className="user-name">{displayName}</p>
+            <p className="user-role">{displayRole}</p>
           </div>
           <button className="logout-button" onClick={handleLogout} title="Logout">
             <HiArrowRightOnRectangle />

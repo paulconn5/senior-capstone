@@ -1,15 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { HiUser, HiBell, HiShieldCheck, HiPaintBrush, HiLockClosed } from 'react-icons/hi2'
 import Navbar from '../components/Navbar'
 import './Settings.css'
+import useAuth from '../hooks/useAuth'
 
 function Settings() {
+  const { profile, token, loading } = useAuth()
+
   const [formData, setFormData] = useState({
-    fullName: 'Daniel Thompson',
-    email: 'thompsda@mail.uc.edu',
-    major: 'Cybersecurity',
-    year: 'Freshman'
+    fullName: '',
+    email: '',
+    major: '',
+    year: '',
+    about: '',
+    tags: ''
   })
+
+  useEffect(() => {
+    if (!profile) return
+    setFormData({
+      fullName: `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim(),
+      email: profile.email ?? '',
+      major: profile.degree ?? '',
+      year: profile.degreeLevel ?? '',
+      about: profile.aboutMe ?? '',
+      tags: (profile.tags || []).join(', ')
+    })
+  }, [profile])
 
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
@@ -53,8 +70,51 @@ function Settings() {
 
   const handleSave = (e) => {
     e.preventDefault()
-    console.log('Saving settings:', { formData, notifications, privacy, appearance })
-    alert('Settings saved successfully!')
+    // send updated profile to the API
+    if (!profile || !token) {
+      alert('Not authenticated')
+      return
+    }
+
+    const body = {
+      FullName: formData.fullName,
+      Degree: formData.major,
+      DegreeLevel: formData.year,
+      AboutMe: formData.about,
+      Tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+    }
+
+    fetch(`https://localhost:7068/api/users/${profile.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to save')
+        return res.json()
+      })
+      .then(() => {
+        // update local stored user name
+        try {
+          const raw = localStorage.getItem('user')
+          if (raw) {
+            const obj = JSON.parse(raw)
+            const parts = (formData.fullName || '').trim().split(' ', 2)
+            obj.FirstName = parts[0] || obj.FirstName
+            obj.LastName = parts[1] || obj.LastName
+            localStorage.setItem('user', JSON.stringify(obj))
+          }
+        } catch {}
+
+        alert('Settings saved successfully!')
+      })
+      .catch(err => {
+        console.error(err)
+        alert('Failed to save settings')
+      })
   }
 
   const handleCancel = () => {
