@@ -55,6 +55,17 @@ builder.Services.AddAuthentication(options =>
 });
 
 var app = builder.Build();
+// Apply migrations + seed database
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Automatically apply migrations
+    db.Database.Migrate();
+
+    // Seed initial data
+    DataSeeder.Seed(db);
+}
 
 app.UseCors("AllowReactDev");
 app.UseDefaultFiles();

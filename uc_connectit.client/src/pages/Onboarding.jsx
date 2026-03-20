@@ -1,44 +1,14 @@
 // src/pages/Onboarding.jsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './Onboarding.css';
-
-const DEGREE_OPTIONS = [
-    'Information Technology',
-    'Data Tech',
-    'Game Dev',
-    'Computer Science',
-    'Cybersecurity',
-    'Data Science',
-    'Software Application Development',
-    'Networking & Systems',
-    'Other'
-]; 
-
-const TAG_OPTIONS = [
-    'JavaScript',
-    'C# / .NET',
-    'Python',
-    'Java',
-    'SQL / Databases',
-    'Cloud (Azure / AWS / GCP)',
-    'Cybersecurity',
-    'Networking',
-    'Data Analytics',
-    'DevOps / CI/CD',
-    'UI/UX',
-    'Project Management',
-    'Web Development',
-    'Mobile Development',
-    'AI / Machine Learning',
-    'Game Development',
-    'IT Management / Leadership',
-    'Research / Academia'
-];
 
 function Onboarding() {
     const [role, setRole] = useState('student');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    const [degrees, setDegrees] = useState([]);
+    const [tags, setTags] = useState([]);
 
     const [formData, setFormData] = useState({
         first_name: '',
@@ -46,12 +16,34 @@ function Onboarding() {
         email: '',
         password: '',
         role: 'student',
-        degree: '',
         degree_level: '',
         graduation_date: '',
-        tags: [],
+        degreeIds: [],
+        tagIds: [],
         about_me: ''
     });
+
+    // Load degrees + tags from backend
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [degRes, tagRes] = await Promise.all([
+                    fetch('https://localhost:7068/api/degrees'),
+                    fetch('https://localhost:7068/api/tags')
+                ]);
+
+                const degData = await degRes.json();
+                const tagData = await tagRes.json();
+
+                setDegrees(degData);
+                setTags(tagData);
+            } catch (err) {
+                console.error('Error loading dropdown data:', err);
+            }
+        }
+
+        fetchData();
+    }, []);
 
     function handleRoleChange(newRole) {
         setRole(newRole);
@@ -63,12 +55,14 @@ function Onboarding() {
         setFormData(prev => ({ ...prev, [name]: value }));
     }
 
-    function handleMultiSelectChange(e) {
-        const { options } = e.target;
-        const selected = Array.from(options)
-            .filter(o => o.selected)
-            .map(o => o.value);
-        setFormData(prev => ({ ...prev, tags: selected }));
+    function handleMultiSelectDegrees(e) {
+        const selected = Array.from(e.target.selectedOptions).map(o => parseInt(o.value));
+        setFormData(prev => ({ ...prev, degreeIds: selected }));
+    }
+
+    function handleMultiSelectTags(e) {
+        const selected = Array.from(e.target.selectedOptions).map(o => parseInt(o.value));
+        setFormData(prev => ({ ...prev, tagIds: selected }));
     }
 
     async function handleSubmit(e) {
@@ -86,29 +80,26 @@ function Onboarding() {
                     firstName: formData.first_name,
                     lastName: formData.last_name,
                     role: formData.role,
-                    degree: formData.degree,
                     degreeLevel: formData.degree_level,
-                    graduationDate: formData.graduation_date,
+                    graduationDate: parseInt(formData.graduation_date),
                     aboutMe: formData.about_me,
-                    tags: formData.tags
+                    degreeIds: formData.degreeIds,
+                    tagIds: formData.tagIds
                 })
             });
 
             let data;
             try {
-                data = await response.json(); // try parsing JSON
+                data = await response.json();
             } catch {
                 data = null;
             }
 
-            // Debug logs
             console.log('Status:', response.status);
-            console.log('OK:', response.ok);
-            console.log('Response body:', data);
+            console.log('Response:', data);
 
             if (!response.ok) {
                 setError(data?.message || `Server responded with status ${response.status}`);
-                setLoading(false);
                 return;
             }
 
@@ -116,7 +107,7 @@ function Onboarding() {
             window.location.href = '/';
         } catch (err) {
             console.error('Fetch error:', err);
-            setError('Failed to submit onboarding. Check console for details.');
+            setError('Failed to submit onboarding.');
         } finally {
             setLoading(false);
         }
@@ -125,9 +116,6 @@ function Onboarding() {
     return (
         <div className="onboard-container">
             <h1>ConnectIT Onboarding</h1>
-            <p className="onboard-subtitle">
-                Tell us about yourself so we can match you with the right {role === 'student' ? 'mentor' : 'students'}.
-            </p>
 
             <div className="role-toggle">
                 <button
@@ -147,24 +135,23 @@ function Onboarding() {
             </div>
 
             <form onSubmit={handleSubmit} className="onboard-form">
+
                 <label>Email
                     <input name="email" type="email" value={formData.email} onChange={handleChange} required />
                 </label>
+
                 <label>Password
                     <input name="password" type="password" value={formData.password} onChange={handleChange} required />
                 </label>
+
                 <label>First Name
                     <input name="first_name" value={formData.first_name} onChange={handleChange} required />
                 </label>
+
                 <label>Last Name
                     <input name="last_name" value={formData.last_name} onChange={handleChange} required />
                 </label>
-                <label>{role === 'student' ? 'Major' : 'Primary Role / Title'}
-                    <select name="degree" value={formData.degree} onChange={handleChange} required>
-                        <option value="">Select one</option>
-                        {DEGREE_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                </label>
+
                 <label>Degree Level
                     <select name="degree_level" value={formData.degree_level} onChange={handleChange} required>
                         <option value="">Select one</option>
@@ -174,20 +161,43 @@ function Onboarding() {
                         <option value="PhD">PhD</option>
                     </select>
                 </label>
-                <label>{role === 'student' ? 'Expected Graduation Year' : 'Graduation Year'}
-                    <input type="number" name="graduation_date" value={formData.graduation_date} onChange={handleChange} placeholder="e.g. 2026" required />
+
+                <label>Graduation Year
+                    <input
+                        type="number"
+                        name="graduation_date"
+                        value={formData.graduation_date}
+                        onChange={handleChange}
+                        placeholder="e.g. 2026"
+                        required
+                    />
                 </label>
-                <label>{role === 'student' ? 'Interests (select all that apply)' : 'Skills (select all that apply)'}
-                    <select name="tags" multiple value={formData.tags} onChange={handleMultiSelectChange} size={5}>
-                        {TAG_OPTIONS.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+
+                <label>Degree(s)
+                    <select multiple value={formData.degreeIds.map(String)} onChange={handleMultiSelectDegrees} size={5}>
+                        {degrees.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
                     </select>
                     <span className="hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</span>
                 </label>
-                <label>What are your goals for this mentorship?
-                    <textarea name="about_me" value={formData.about_me} onChange={handleChange} rows={3}
-                        placeholder={role === 'student'
-                            ? 'Example: I want guidance on internships, career paths, and technical interview prep.'
-                            : 'Example: I want to support students, give career advice, and grow my leadership skills.'} />
+
+                <label>{role === 'student' ? 'Interests' : 'Skills'}
+                    <select multiple value={formData.tagIds.map(String)} onChange={handleMultiSelectTags} size={5}>
+                        {tags.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                    </select>
+                    <span className="hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</span>
+                </label>
+
+                <label>About Me
+                    <textarea
+                        name="about_me"
+                        value={formData.about_me}
+                        onChange={handleChange}
+                        rows={3}
+                    />
                 </label>
 
                 {error && <p className="error">{error}</p>}

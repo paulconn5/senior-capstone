@@ -30,11 +30,11 @@ namespace UC_ConnectIT.Server.Controllers
         {
             try
             {
-                // 1Check if email already exists
+                // Check if email already exists
                 if (await _db.Users.AnyAsync(u => u.Email == request.Email))
                     return BadRequest(new { message = "Email already exists." });
 
-                // 2Create new user
+                //  Create user
                 var user = new User
                 {
                     Email = request.Email,
@@ -42,35 +42,49 @@ namespace UC_ConnectIT.Server.Controllers
                     FirstName = request.FirstName,
                     LastName = request.LastName,
                     Role = request.Role,
-                    Degree = request.Degree,
-                    DegreeLevel = request.DegreeLevel,
                     GraduationDate = request.GraduationDate,
                     AboutMe = request.AboutMe,
                     IsEmailVerified = false
                 };
 
                 _db.Users.Add(user);
-                await _db.SaveChangesAsync(); 
+                await _db.SaveChangesAsync();
 
-                // Handle tags / skills 
-                if (request.Tags != null && request.Tags.Count > 0)
+                // Assign Degrees
+                if (request.DegreeIds != null && request.DegreeIds.Count > 0)
                 {
-                    foreach (var tagName in request.Tags)
-                    {
-                        var tag = await _db.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
-                        if (tag == null)
-                        {
-                            tag = new Tag { Name = tagName };
-                            _db.Tags.Add(tag);
-                            await _db.SaveChangesAsync();
-                        }
+                    var validDegrees = await _db.Degrees
+                        .Where(d => request.DegreeIds.Contains(d.Id))
+                        .Select(d => d.Id)
+                        .ToListAsync();
 
-                        var userTag = new UserTag
+                    foreach (var degreeId in validDegrees)
+                    {
+                        _db.UserDegrees.Add(new UserDegree
                         {
                             UserId = user.Id,
-                            TagId = tag.Id
-                        };
-                        _db.UserTags.Add(userTag);
+                            DegreeId = degreeId
+                        });
+                    }
+
+                    await _db.SaveChangesAsync();
+                }
+
+                // Assign Tags 
+                if (request.TagIds != null && request.TagIds.Count > 0)
+                {
+                    var validTags = await _db.Tags
+                        .Where(t => request.TagIds.Contains(t.Id))
+                        .Select(t => t.Id)
+                        .ToListAsync();
+
+                    foreach (var tagId in validTags)
+                    {
+                        _db.UserTags.Add(new UserTag
+                        {
+                            UserId = user.Id,
+                            TagId = tagId
+                        });
                     }
 
                     await _db.SaveChangesAsync();
@@ -79,6 +93,7 @@ namespace UC_ConnectIT.Server.Controllers
                 // Create email verification token
                 var random = new Random();
                 var token = random.Next(100000, 999999).ToString();
+
                 _db.EmailVerificationTokens.Add(new EmailVerificationToken
                 {
                     UserId = user.Id,

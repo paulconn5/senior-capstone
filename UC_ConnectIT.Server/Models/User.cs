@@ -1,5 +1,4 @@
-﻿// UC_ConnectIT.Server/Models/User.cs
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace UC_ConnectIT.Server.Models
 {
@@ -20,13 +19,9 @@ namespace UC_ConnectIT.Server.Models
         public string LastName { get; set; } = string.Empty;
 
         [Required]
-        public string Role { get; set; } = "student"; // 'student' or 'mentor'
+        public string Role { get; set; } = "student";
 
         public string? AboutMe { get; set; }
-
-        public string? Degree { get; set; }
-
-        public string? DegreeLevel { get; set; } // Associates, Bachelors, Masters, PhD
 
         public int? GraduationDate { get; set; }
 
@@ -34,7 +29,13 @@ namespace UC_ConnectIT.Server.Models
 
         public bool IsEmailVerified { get; set; } = false;
 
+        // TAG RELATIONSHIP
         public ICollection<UserTag> UserTags { get; set; } = new List<UserTag>();
 
+        // DEGREE RELATIONSHIP
+        public ICollection<UserDegree> UserDegrees { get; set; } = new List<UserDegree>();
+
+        // Mentor display-only field
+        public string? CareerTitle { get; set; }
     }
 }

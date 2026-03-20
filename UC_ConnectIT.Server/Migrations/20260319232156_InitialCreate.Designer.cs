@@ -12,8 +12,8 @@ using UC_ConnectIT.Server.Data;
 namespace UC_ConnectIT.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260217172305_AddMessaging")]
-    partial class AddMessaging
+    [Migration("20260319232156_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -53,6 +53,28 @@ namespace UC_ConnectIT.Server.Migrations
                         .IsUnique();
 
                     b.ToTable("Conversations");
+                });
+
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.Degree", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TagSubcategoryId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TagSubcategoryId");
+
+                    b.ToTable("Degrees");
                 });
 
             modelBuilder.Entity("UC_ConnectIT.Server.Models.EmailVerificationToken", b =>
@@ -125,9 +147,53 @@ namespace UC_ConnectIT.Server.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("TagSubcategoryId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("TagSubcategoryId");
+
                     b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.TagCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TagCategories");
+                });
+
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.TagSubcategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TagCategoryId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TagCategoryId");
+
+                    b.ToTable("TagSubcategories");
                 });
 
             modelBuilder.Entity("UC_ConnectIT.Server.Models.User", b =>
@@ -141,14 +207,11 @@ namespace UC_ConnectIT.Server.Migrations
                     b.Property<string>("AboutMe")
                         .HasColumnType("text");
 
+                    b.Property<string>("CareerTitle")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Degree")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DegreeLevel")
-                        .HasColumnType("text");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -179,6 +242,30 @@ namespace UC_ConnectIT.Server.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.UserDegree", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DegreeId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DegreeLevel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("UserId1")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "DegreeId");
+
+                    b.HasIndex("DegreeId");
+
+                    b.HasIndex("UserId1");
+
+                    b.ToTable("UserDegrees");
                 });
 
             modelBuilder.Entity("UC_ConnectIT.Server.Models.UserTag", b =>
@@ -215,6 +302,17 @@ namespace UC_ConnectIT.Server.Migrations
                     b.Navigation("User2");
                 });
 
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.Degree", b =>
+                {
+                    b.HasOne("UC_ConnectIT.Server.Models.TagSubcategory", "TagSubcategory")
+                        .WithMany("Degrees")
+                        .HasForeignKey("TagSubcategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TagSubcategory");
+                });
+
             modelBuilder.Entity("UC_ConnectIT.Server.Models.EmailVerificationToken", b =>
                 {
                     b.HasOne("UC_ConnectIT.Server.Models.User", "User")
@@ -245,6 +343,51 @@ namespace UC_ConnectIT.Server.Migrations
                     b.Navigation("Sender");
                 });
 
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.Tag", b =>
+                {
+                    b.HasOne("UC_ConnectIT.Server.Models.TagSubcategory", "TagSubcategory")
+                        .WithMany("Tags")
+                        .HasForeignKey("TagSubcategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TagSubcategory");
+                });
+
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.TagSubcategory", b =>
+                {
+                    b.HasOne("UC_ConnectIT.Server.Models.TagCategory", "TagCategory")
+                        .WithMany("Subcategories")
+                        .HasForeignKey("TagCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TagCategory");
+                });
+
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.UserDegree", b =>
+                {
+                    b.HasOne("UC_ConnectIT.Server.Models.Degree", "Degree")
+                        .WithMany("UserDegrees")
+                        .HasForeignKey("DegreeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("UC_ConnectIT.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("UC_ConnectIT.Server.Models.User", null)
+                        .WithMany("UserDegrees")
+                        .HasForeignKey("UserId1");
+
+                    b.Navigation("Degree");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("UC_ConnectIT.Server.Models.UserTag", b =>
                 {
                     b.HasOne("UC_ConnectIT.Server.Models.Tag", "Tag")
@@ -269,13 +412,32 @@ namespace UC_ConnectIT.Server.Migrations
                     b.Navigation("Messages");
                 });
 
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.Degree", b =>
+                {
+                    b.Navigation("UserDegrees");
+                });
+
             modelBuilder.Entity("UC_ConnectIT.Server.Models.Tag", b =>
                 {
                     b.Navigation("UserTags");
                 });
 
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.TagCategory", b =>
+                {
+                    b.Navigation("Subcategories");
+                });
+
+            modelBuilder.Entity("UC_ConnectIT.Server.Models.TagSubcategory", b =>
+                {
+                    b.Navigation("Degrees");
+
+                    b.Navigation("Tags");
+                });
+
             modelBuilder.Entity("UC_ConnectIT.Server.Models.User", b =>
                 {
+                    b.Navigation("UserDegrees");
+
                     b.Navigation("UserTags");
                 });
 #pragma warning restore 612, 618

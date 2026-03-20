@@ -38,8 +38,6 @@ namespace UC_ConnectIT.Server.Controllers
                 user.LastName,
                 user.Role,
                 user.AboutMe,
-                user.Degree,
-                user.DegreeLevel,
                 user.GraduationDate,
                 user.CreatedAt,
                 user.IsEmailVerified,
@@ -81,12 +79,6 @@ namespace UC_ConnectIT.Server.Controllers
 
             if (!string.IsNullOrWhiteSpace(request.Role))
                 user.Role = request.Role;
-
-            if (!string.IsNullOrWhiteSpace(request.Degree))
-                user.Degree = request.Degree;
-
-            if (!string.IsNullOrWhiteSpace(request.DegreeLevel))
-                user.DegreeLevel = request.DegreeLevel;
 
             if (request.GraduationDate.HasValue)
                 user.GraduationDate = request.GraduationDate;
