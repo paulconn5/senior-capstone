@@ -1,88 +1,74 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import MentorCard from '../components/MentorCard'
 import './MentorMatch.css'
+import useAuth from '../hooks/useAuth'
 
 function MentorMatch() {
+  const { token, profile } = useAuth()
+  const [matches, setMatches] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // local filter state
   const [educationFilter, setEducationFilter] = useState('all')
   const [fieldFilter, setFieldFilter] = useState('all')
   const [interestFilter, setInterestFilter] = useState('all')
 
-  // Sample mentor data
-  const mentors = [
-    {
-      id: 1,
-      name: 'David Miller',
-      photo: 'https://via.placeholder.com/150',
-      field: 'Cybersecurity',
-      education: "Master's in Cybersecurity",
-      interests: ['Security Architecture', 'Risk Management', 'Network Security', 'Incident Response', 'Threat Analysis']
-    },
-    {
-      id: 2,
-      name: 'Marcus Johnson',
-      photo: 'https://via.placeholder.com/150',
-      field: 'Cloud Computing',
-      education: 'MS in Cloud Architecture',
-      interests: ['AWS', 'Azure', 'Cloud Migration', 'DevOps']
-    },
-    {
-      id: 3,
-      name: 'Emily Rodriguez',
-      photo: 'https://via.placeholder.com/150',
-      field: 'UX/UI Design',
-      education: "Bachelor's in Web Design & Development",
-      interests: ['User Research', 'Wireframing', 'Figma', 'Responsive Design']
-    },
-    {
-      id: 4,
-      name: 'James Liu',
-      photo: 'https://via.placeholder.com/150',
-      field: 'Software Engineering',
-      education: 'MS in Computer Science',
-      interests: ['React', 'Node.js', 'System Design', 'Agile']
-    },
-    {
-      id: 5,
-      name: 'Dr. Amanda Foster',
-      photo: 'https://via.placeholder.com/150',
-      field: 'Data Science',
-      education: 'PhD in Data Analytics',
-      interests: ['Machine Learning', 'Python', 'Data Visualization', 'Big Data']
-    },
-    {
-      id: 6,
-      name: 'Kevin Patel',
-      photo: 'https://via.placeholder.com/150',
-      field: 'Mobile Development',
-      education: 'BS in Software Development',
-      interests: ['iOS', 'Swift', 'Android', 'Flutter']
-    },
-    {
-      id: 7,
-      name: 'Lisa Martinez',
-      photo: 'https://via.placeholder.com/150',
-      field: 'Database Administration',
-      education: 'MS in Database Systems',
-      interests: ['SQL', 'MongoDB', 'Performance Tuning', 'Database Design']
-    },
-    {
-      id: 8,
-      name: 'Robert Kim',
-      photo: 'https://via.placeholder.com/150',
-      field: 'Network Engineering',
-      education: 'BS in Network Administration',
-      interests: ['Cisco', 'Network Security', 'Infrastructure', 'Cloud Networking']
-    }
-  ]
+  useEffect(() => {
+    async function loadMatches() {
+      setLoading(true)
+      setError(null)
+      if (!token) {
+        setMatches([])
+        setLoading(false)
+        return
+      }
 
-  // Filter mentors based on selected criteria
-  const filteredMentors = mentors.filter((mentor) => {
+      try {
+        const res = await fetch('https://localhost:7068/api/matches', {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => '')
+          throw new Error(`Failed to load matches: ${res.status} ${text}`)
+        }
+
+        const data = await res.json()
+
+        // Map server DTO to MentorCard-friendly objects
+        const mapped = data.map(m => ({
+          id: m.id,
+          name: `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'User',
+          photo: m.photo || 'https://via.placeholder.com/150',
+          field: m.careerTitle || '',
+          education: (m.degrees || []).map(d => d.name).join(', '),
+          interests: (m.tags || []).map(t => t.name || t)
+        }))
+
+        setMatches(mapped)
+      } catch (err) {
+        console.error(err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadMatches()
+  }, [token])
+
+
+  const filtered = matches.filter((mentor) => {
     // Education filter
     const educationMatch = educationFilter === 'all' ||
-      (educationFilter === 'bachelors' && (mentor.education.includes('Bachelor') || mentor.education.includes('BS'))) ||
-      (educationFilter === 'masters' && (mentor.education.includes('Master') || mentor.education.includes('MS'))) ||
-      (educationFilter === 'phd' && mentor.education.includes('PhD'))
+      (educationFilter === 'bachelors' && mentor.education.toLowerCase().includes('bachelor')) ||
+      (educationFilter === 'masters' && mentor.education.toLowerCase().includes('master')) ||
+      (educationFilter === 'phd' && mentor.education.toLowerCase().includes('phd'))
 
     // Field filter
     const fieldMatch = fieldFilter === 'all' ||
@@ -95,17 +81,12 @@ function MentorMatch() {
       (fieldFilter === 'network' && mentor.field.toLowerCase().includes('network')) ||
       (fieldFilter === 'database' && mentor.field.toLowerCase().includes('database'))
 
-    // Interest filter - check if any mentor interest contains the filter keyword
+    // Interest filter
     const interestMatch = interestFilter === 'all' ||
-      (interestFilter === 'security' && mentor.interests.some(interest =>
-        interest.toLowerCase().includes('security') || interest.toLowerCase().includes('hacking'))) ||
-      (interestFilter === 'cloud' && mentor.interests.some(interest =>
-        interest.toLowerCase().includes('cloud') || interest.toLowerCase().includes('aws') || interest.toLowerCase().includes('azure'))) ||
-      (interestFilter === 'design' && mentor.interests.some(interest =>
-        interest.toLowerCase().includes('design') || interest.toLowerCase().includes('ux') || interest.toLowerCase().includes('ui'))) ||
-      (interestFilter === 'development' && mentor.interests.some(interest =>
-        interest.toLowerCase().includes('development') || interest.toLowerCase().includes('programming') ||
-        interest.toLowerCase().includes('react') || interest.toLowerCase().includes('node')))
+      (interestFilter === 'security' && mentor.interests.some(i => i.toLowerCase().includes('security'))) ||
+      (interestFilter === 'cloud' && mentor.interests.some(i => i.toLowerCase().includes('cloud') || i.toLowerCase().includes('aws') || i.toLowerCase().includes('azure'))) ||
+      (interestFilter === 'design' && mentor.interests.some(i => i.toLowerCase().includes('design') || i.toLowerCase().includes('ux'))) ||
+      (interestFilter === 'development' && mentor.interests.some(i => i.toLowerCase().includes('development') || i.toLowerCase().includes('programming') || i.toLowerCase().includes('react')))
 
     return educationMatch && fieldMatch && interestMatch
   })
@@ -121,7 +102,7 @@ function MentorMatch() {
         </div>
 
         <div className="filter-section">
-          <h3 className="filter-title">Filter Mentors</h3>
+          <h3 className="filter-title">Filter</h3>
           <div className="filter-controls">
             <div className="filter-group">
               <label>Education Level</label>
@@ -171,12 +152,18 @@ function MentorMatch() {
         </div>
 
         <div className="mentors-list-section">
-          <p className="mentor-count">Showing {filteredMentors.length} mentors</p>
-          <div className="mentors-grid">
-            {filteredMentors.map((mentor) => (
-              <MentorCard key={mentor.id} mentor={mentor} />
-            ))}
-          </div>
+          {loading && <p>Loading matches...</p>}
+          {error && <p className="error">{error}</p>}
+          {!loading && !error && (
+            <>
+              <p className="mentor-count">Showing {filtered.length} matches</p>
+              <div className="mentors-grid">
+                {filtered.map((mentor) => (
+                  <MentorCard key={mentor.id} mentor={mentor} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </main>
     </div>
