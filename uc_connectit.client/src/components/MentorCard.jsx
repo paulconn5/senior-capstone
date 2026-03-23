@@ -7,26 +7,38 @@ function MentorCard({ mentor }) {
   const [showAllInterests, setShowAllInterests] = useState(false)
   const navigate = useNavigate()
 
-  // Show first 3 interests, then "+X more" button
-  const visibleInterests = showAllInterests ? mentor.interests : mentor.interests.slice(0, 3)
-  const remainingCount = mentor.interests.length - 3
+  const visibleInterests = showAllInterests ? mentor.interests : (mentor.interests || []).slice(0, 3)
+  const remainingCount = Math.max(0, (mentor.interests || []).length - 3)
 
   const handleCardClick = () => {
     navigate(`/mentor/${mentor.id}`)
   }
+
+  const score = typeof mentor.score === 'number' ? mentor.score : null
+  const scorePct = score != null ? Math.min(100, Math.max(0, Math.round(score))) : 0
+
+  // Compute initials (first + last initial)
+  const initials = (() => {
+    const name = (mentor.name || `${mentor.firstName || ''} ${mentor.lastName || ''}`).trim()
+    if (!name) return ''
+    const parts = name.split(/\s+/)
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+  })()
 
   return (
     <div className="mentor-card" onClick={handleCardClick}>
       <div className="mentor-card-header"></div>
       <div className="mentor-card-body">
         <div className="mentor-photo-wrapper">
-          <img src={mentor.photo} alt={mentor.name} className="mentor-photo" />
+          <div className="avatar-initials" title={mentor.name || ''}>
+            {initials}
+          </div>
         </div>
 
         <h3 className="mentor-name">{mentor.name}</h3>
 
         <div className="mentor-info">
-          {/* Only render career/field when present */}
           {mentor.field && (
             <div className="info-item">
               <HiBriefcase className="info-icon" />
@@ -62,6 +74,22 @@ function MentorCard({ mentor }) {
           </div>
         </div>
       </div>
+
+      {score != null && (
+        <div className="card-footer">
+          <div className="score-row">
+            <div className="score-label">Match Score</div>
+            <div className="score-pill">{score} pt{score === 1 ? '' : 's'}</div>
+          </div>
+
+          <div className="score-bar" aria-hidden>
+            <div
+              className="score-fill"
+              style={{ width: `${scorePct}%` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -40,14 +40,15 @@ function MentorMatch() {
 
         const data = await res.json()
 
-        // Map server DTO to MentorCard-friendly objects
+        // Map server DTO to MentorCard-friendly objects (preserve score)
         const mapped = data.map(m => ({
           id: m.id,
           name: `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'User',
           photo: m.photo || 'https://via.placeholder.com/150',
           field: m.careerTitle || '',
           education: (m.degrees || []).map(d => d.name).join(', '),
-          interests: (m.tags || []).map(t => t.name || t)
+          interests: (m.tags || []).map(t => t.name || t),
+          score: m.score ?? 0 
         }))
 
         setMatches(mapped)
@@ -61,7 +62,6 @@ function MentorMatch() {
 
     loadMatches()
   }, [token])
-
 
   const filtered = matches.filter((mentor) => {
     // Education filter

@@ -44,15 +44,9 @@ export default function useAuth() {
         })
 
         if (!res.ok) {
-          // Log details to help debug why the request failed
           const text = await res.text().catch(() => '')
-          // eslint-disable-next-line no-console
-          console.warn(`useAuth: GET /api/users/${userId} returned ${res.status}`, text)
-
           // If unauthorized, clear stored token/user to avoid repeated 401s.
           if (res.status === 401) {
-            // eslint-disable-next-line no-console
-            console.warn('useAuth: clearing local auth (401). You may need to re-login.')
             localStorage.removeItem('token')
             localStorage.removeItem('user')
             setToken(null)
@@ -64,12 +58,7 @@ export default function useAuth() {
         } else {
           const data = await res.json()
 
-          // Debug: log what the API actually returned so we can inspect degrees shape
-          // eslint-disable-next-line no-console
-          console.debug('useAuth: fetched profile payload:', data)
-
-          // defensive normalization: handle various shapes (PascalCase, camelCase,
-          // nested userDegrees, arrays of ids, strings, or objects)
+          // Normalize API response to client-friendly shape.
           const rawDegrees =
             data.degrees ??
             data.Degrees ??
@@ -122,10 +111,6 @@ export default function useAuth() {
               }
             )
           }
-
-          // Debug: show the normalized object that the UI reads from
-          // eslint-disable-next-line no-console
-          console.debug('useAuth: normalized profile:', normalized)
 
           setProfile(normalized)
         }

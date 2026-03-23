@@ -19,7 +19,8 @@ namespace UC_ConnectIT.Server.Controllers
             _db = db;
         }
 
-        // GET api/matches?limit=50
+        // Retrieves potential matches for the authenticated user.
+        // Returns users of the opposite role ordered by computed match score.
         [HttpGet]
         public async Task<IActionResult> GetMatches(int limit = 50)
         {
