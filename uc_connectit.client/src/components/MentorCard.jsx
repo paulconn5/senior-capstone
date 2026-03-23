@@ -17,7 +17,6 @@ function MentorCard({ mentor }) {
   const score = typeof mentor.score === 'number' ? mentor.score : null
   const scorePct = score != null ? Math.min(100, Math.max(0, Math.round(score))) : 0
 
-  // Compute initials (first + last initial)
   const initials = (() => {
     const name = (mentor.name || `${mentor.firstName || ''} ${mentor.lastName || ''}`).trim()
     if (!name) return ''

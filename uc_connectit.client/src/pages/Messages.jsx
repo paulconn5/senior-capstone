@@ -2,12 +2,16 @@ import { useState, useEffect, useRef } from 'react'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { HiMagnifyingGlass, HiEllipsisVertical, HiPaperAirplane } from 'react-icons/hi2'
 import { HiUser } from 'react-icons/hi2'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import './Messages.css'
+import useAuth from '../hooks/useAuth'
 
 const API_BASE = 'https://localhost:7068'
 
 function Messages() {
+  const { token, profile } = useAuth()
+  const navigate = useNavigate()
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [messageText, setMessageText] = useState('')
   const [conversations, setConversations] = useState([])
@@ -15,39 +19,49 @@ function Messages() {
   const [connection, setConnection] = useState(null)
   const messagesEndRef = useRef(null)
   const selectedConversationRef = useRef(null)
+  const location = useLocation()
+  const query = new URLSearchParams(location.search)
+  const initialConvo = query.get('convo') ? Number(query.get('convo')) : null
 
-  const user = JSON.parse(localStorage.getItem('user'))
-
-  // Keep ref in sync so the SignalR callback always sees the latest value
   useEffect(() => {
     selectedConversationRef.current = selectedConversation
   }, [selectedConversation])
 
-  // Load conversations on mount
+  // Load conversations
   useEffect(() => {
-    if (!user) return
-    fetch(`${API_BASE}/api/messages/conversations?userId=${user.id}`)
-      .then(res => res.json())
-      .then(data => setConversations(data))
-  }, [])
+    if (!profile || !profile.id) return
 
-  // Set up SignalR connection on mount
+    fetch(`${API_BASE}/api/messages/conversations?userId=${profile.id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        setConversations(data)
+        if (initialConvo) {
+          // ensure the initial conversation exists in list 
+          handleSelectConversation(initialConvo)
+        }
+      })
+  }, [profile, token])
+
+  // Set up SignalR connection 
   useEffect(() => {
-    if (!user) return
+    if (!profile || !profile.id) return
 
     const conn = new HubConnectionBuilder()
-      .withUrl(`${API_BASE}/chathub`)
+      .withUrl(`${API_BASE}/chathub`, token ? { accessTokenFactory: () => token } : undefined)
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Information)
       .build()
 
     conn.on('ReceiveMessage', (msg) => {
-      // If this message is for the currently selected conversation, add it to the chat
       if (msg.conversationId === selectedConversationRef.current) {
         setMessages(prev => [...prev, msg])
       }
 
-      // Update conversation list preview
       setConversations(prev => prev.map(c =>
         c.id === msg.conversationId
           ? {
@@ -56,54 +70,74 @@ function Messages() {
               lastMessageAt: msg.sentAt,
               unreadCount: msg.conversationId === selectedConversationRef.current
                 ? c.unreadCount
-                : c.unreadCount + 1
+                : (c.unreadCount || 0) + 1
             }
           : c
       ))
     })
 
-    conn.start().then(() => setConnection(conn))
+    conn.start()
+      .then(() => setConnection(conn))
+      .catch(err => console.error('SignalR start failed', err))
 
-    return () => { conn.stop() }
-  }, [])
+    return () => { conn.stop().catch(() => {}) }
+  }, [profile, token])
 
-  // Auto-scroll to bottom when messages change
+  // If connection becomes available and a conversation is already selected, join it
+  useEffect(() => {
+    if (connection && selectedConversation) {
+      connection.invoke('JoinConversation', selectedConversation).catch(err => {
+        console.error('JoinConversation failed', err)
+      })
+    }
+  }, [connection, selectedConversation])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const handleSelectConversation = async (convoId) => {
-    // Leave previous group
+    if (!profile || !profile.id) return
+
     if (selectedConversation && connection) {
-      await connection.invoke('LeaveConversation', selectedConversation)
+      try { await connection.invoke('LeaveConversation', selectedConversation) } catch (err) {console.error(err)}
     }
 
     setSelectedConversation(convoId)
 
     // Fetch message history
-    const res = await fetch(
-      `${API_BASE}/api/messages/conversations/${convoId}?userId=${user.id}`
-    )
-    const data = await res.json()
-    setMessages(data)
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/messages/conversations/${convoId}?userId=${profile.id}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        }
+      )
+      const data = await res.json()
+      setMessages(data)
+    } catch (err) {
+      console.error('Failed to load messages', err)
+      setMessages([])
+    }
 
-    // Reset unread count for this conversation
-    setConversations(prev => prev.map(c =>
-      c.id === convoId ? { ...c, unreadCount: 0 } : c
-    ))
+    // Reset unread for this conversation
+    setConversations(prev => prev.map(c => c.id === convoId ? { ...c, unreadCount: 0 } : c))
 
-    // Join new group
+    // Join group if connection ready
     if (connection) {
-      await connection.invoke('JoinConversation', convoId)
+      try { await connection.invoke('JoinConversation', convoId) } catch (err) { console.error('JoinConversation failed', err) }
     }
   }
 
   const handleSendMessage = async (e) => {
     e.preventDefault()
-    if (!messageText.trim() || !connection || !selectedConversation) return
+    if (!messageText.trim() || !connection || !selectedConversation || !profile || !profile.id) return
 
     await connection.invoke('SendMessage', {
-      senderId: user.id,
+      senderId: profile.id,
       conversationId: selectedConversation,
       content: messageText
     })
@@ -140,7 +174,6 @@ function Messages() {
 
       <main className="messages-main">
         <div className="messages-container">
-          {/* Conversations Sidebar */}
           <div className="conversations-sidebar">
             <div className="sidebar-header">
               <h2>Messages</h2>
@@ -174,7 +207,15 @@ function Messages() {
                   </div>
                   <div className="conversation-info">
                     <div className="conversation-header">
-                      <h3>{conversation.otherUserName}</h3>
+                      <h3
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/mentor/${conversation.otherUserId}`)
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {conversation.otherUserName}
+                      </h3>
                       <span className="conversation-time">
                         {formatTime(conversation.lastMessageAt)}
                       </span>
@@ -189,7 +230,6 @@ function Messages() {
             </div>
           </div>
 
-          {/* Chat Area */}
           <div className="chat-area">
             {selectedConv ? (
               <>
@@ -201,7 +241,12 @@ function Messages() {
                       </div>
                     </div>
                     <div>
-                      <h2>{selectedConv.otherUserName}</h2>
+                      <h2
+                        onClick={() => navigate(`/mentor/${selectedConv.otherUserId}`)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {selectedConv.otherUserName}
+                      </h2>
                     </div>
                   </div>
                   <button className="more-options">
@@ -213,7 +258,7 @@ function Messages() {
                   {messages.map((message) => (
                     <div
                       key={message.id}
-                      className={`message ${message.senderId === user.id ? 'message-sent' : 'message-received'}`}
+                      className={`message ${message.senderId === profile.id ? 'message-sent' : 'message-received'}`}
                     >
                       <div className="message-bubble">
                         <p>{message.content}</p>

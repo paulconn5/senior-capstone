@@ -8,11 +8,12 @@ import useAuth from '../hooks/useAuth'
 function MentorDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { token } = useAuth()
+  const { token, profile } = useAuth()
 
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [creatingConversation, setCreatingConversation] = useState(false)
 
   useEffect(() => {
     async function loadUser() {
@@ -39,7 +40,6 @@ function MentorDetail() {
 
         const data = await res.json()
 
-        // Defensive normalization
         const careerTitle = data.careerTitle ?? data.CareerTitle ?? data.career ?? data.title ?? ''
         const firstName = data.FirstName ?? data.firstName ?? ''
         const lastName = data.LastName ?? data.lastName ?? ''
@@ -74,6 +74,40 @@ function MentorDetail() {
   }, [id, token])
 
   const handleBack = () => navigate('/dashboard')
+
+  const handleMessageClick = async () => {
+    if (!profile || !profile.id) return navigate('/')
+
+    setCreatingConversation(true)
+    try {
+      const res = await fetch('https://localhost:7068/api/messages/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          otherUserId: Number(id)
+        })
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        console.error('Failed to create conversation', res.status, text)
+        return
+      }
+
+      const data = await res.json()
+      const convoId = data.conversationId
+      if (convoId) {
+        navigate(`/messages?convo=${convoId}`)
+      }
+    } catch (err) {
+      console.error('Error creating conversation', err)
+    } finally {
+      setCreatingConversation(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -110,7 +144,6 @@ function MentorDetail() {
     )
   }
 
-  // Compute initials for the large avatar
   const initials = (() => {
     const name = `${user.firstName || ''} ${user.lastName || ''}`.trim()
     if (!name) return ''
@@ -133,7 +166,6 @@ function MentorDetail() {
         <div className="mentor-profile-card">
           <div className="profile-header"></div>
           <div className="profile-content">
-            {/* Use initials avatar (styled in MentorCard.css .detail-avatar) */}
             <div className="detail-avatar" aria-hidden title={fullName}>
               {initials}
             </div>
@@ -195,8 +227,8 @@ function MentorDetail() {
             </div>
 
             <div className="action-buttons">
-              <button className="btn-primary">
-                <HiEnvelope /> Message
+              <button className="btn-primary" onClick={handleMessageClick} disabled={creatingConversation}>
+                <HiEnvelope /> {creatingConversation ? 'Starting chat…' : 'Message'}
               </button>
             </div>
           </div>

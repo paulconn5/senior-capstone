@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using UC_ConnectIT.Server.Data;
 using UC_ConnectIT.Server.DTOs;
 using UC_ConnectIT.Server.Models;
@@ -8,6 +10,7 @@ namespace UC_ConnectIT.Server.Controllers
 {
     [ApiController]
     [Route("api/messages")]
+    [Authorize]
     public class MessagesController : ControllerBase
     {
         private readonly AppDbContext _db;
@@ -17,9 +20,19 @@ namespace UC_ConnectIT.Server.Controllers
             _db = db;
         }
 
-        [HttpGet("conversations")]
-        public async Task<IActionResult> GetConversations([FromQuery] int userId)
+        private int? GetUserIdFromClaims()
         {
+            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(id, out var parsed)) return parsed;
+            return null;
+        }
+
+        [HttpGet("conversations")]
+        public async Task<IActionResult> GetConversations()
+        {
+            var userId = GetUserIdFromClaims();
+            if (userId == null) return Unauthorized();
+
             var conversations = await _db.Conversations
                 .Where(c => c.User1Id == userId || c.User2Id == userId)
                 .Include(c => c.User1)
@@ -54,8 +67,11 @@ namespace UC_ConnectIT.Server.Controllers
         }
 
         [HttpGet("conversations/{conversationId}")]
-        public async Task<IActionResult> GetMessages(int conversationId, [FromQuery] int userId)
+        public async Task<IActionResult> GetMessages(int conversationId)
         {
+            var userId = GetUserIdFromClaims();
+            if (userId == null) return Unauthorized();
+
             var convo = await _db.Conversations.FindAsync(conversationId);
             if (convo == null) return NotFound();
             if (convo.User1Id != userId && convo.User2Id != userId)
@@ -91,9 +107,14 @@ namespace UC_ConnectIT.Server.Controllers
         [HttpPost("conversations")]
         public async Task<IActionResult> CreateOrGetConversation([FromBody] CreateConversationDTO dto)
         {
-            // Normalize: always store smaller userId as User1Id
-            var u1 = Math.Min(dto.UserId, dto.OtherUserId);
-            var u2 = Math.Max(dto.UserId, dto.OtherUserId);
+            var userId = GetUserIdFromClaims();
+            if (userId == null) return Unauthorized();
+
+            var otherUserId = dto.OtherUserId;
+            if (otherUserId == 0 || otherUserId == userId) return BadRequest(new { message = "Invalid other user id." });
+
+            var u1 = Math.Min(userId.Value, otherUserId);
+            var u2 = Math.Max(userId.Value, otherUserId);
 
             var existing = await _db.Conversations
                 .FirstOrDefaultAsync(c => c.User1Id == u1 && c.User2Id == u2);

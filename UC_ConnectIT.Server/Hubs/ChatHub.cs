@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using UC_ConnectIT.Server.Data;
 using UC_ConnectIT.Server.DTOs;
 using UC_ConnectIT.Server.Models;
 
 namespace UC_ConnectIT.Server.Hubs
 {
+    [Authorize]
     public class ChatHub : Hub
     {
         private readonly AppDbContext _db;
@@ -13,6 +16,13 @@ namespace UC_ConnectIT.Server.Hubs
         public ChatHub(AppDbContext db)
         {
             _db = db;
+        }
+
+        private int? GetUserIdFromClaims()
+        {
+            var id = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(id, out var parsed)) return parsed;
+            return null;
         }
 
         public async Task JoinConversation(int conversationId)
@@ -27,16 +37,19 @@ namespace UC_ConnectIT.Server.Hubs
 
         public async Task SendMessage(SendMessageDTO dto)
         {
+            var senderId = GetUserIdFromClaims();
+            if (senderId == null) return;
+
             var conversation = await _db.Conversations.FindAsync(dto.ConversationId);
             if (conversation == null) return;
 
-            if (conversation.User1Id != dto.SenderId && conversation.User2Id != dto.SenderId)
+            if (conversation.User1Id != senderId.Value && conversation.User2Id != senderId.Value)
                 return;
 
             var message = new Message
             {
                 ConversationId = dto.ConversationId,
-                SenderId = dto.SenderId,
+                SenderId = senderId.Value,
                 Content = dto.Content,
                 SentAt = DateTime.UtcNow
             };
@@ -45,7 +58,7 @@ namespace UC_ConnectIT.Server.Hubs
             conversation.LastMessageAt = message.SentAt;
             await _db.SaveChangesAsync();
 
-            var sender = await _db.Users.FindAsync(dto.SenderId);
+            var sender = await _db.Users.FindAsync(senderId.Value);
 
             var response = new MessageResponseDTO
             {
@@ -62,8 +75,11 @@ namespace UC_ConnectIT.Server.Hubs
                 .SendAsync("ReceiveMessage", response);
         }
 
-        public async Task MarkAsRead(int conversationId, int userId)
+        public async Task MarkAsRead(int conversationId)
         {
+            var userId = GetUserIdFromClaims();
+            if (userId == null) return;
+
             var unread = await _db.Messages
                 .Where(m => m.ConversationId == conversationId
                     && m.SenderId != userId && !m.IsRead)
