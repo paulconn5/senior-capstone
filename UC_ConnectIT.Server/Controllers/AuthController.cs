@@ -44,7 +44,8 @@ namespace UC_ConnectIT.Server.Controllers
                     Role = request.Role,
                     GraduationDate = request.GraduationDate,
                     AboutMe = request.AboutMe,
-                    IsEmailVerified = false
+                    IsEmailVerified = false,
+                    CareerTitle = request.CareerTitle
                 };
 
                 _db.Users.Add(user);

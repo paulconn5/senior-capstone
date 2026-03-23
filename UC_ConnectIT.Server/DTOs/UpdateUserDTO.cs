@@ -9,5 +9,6 @@ namespace UC_ConnectIT.Server.DTOs
         public int? GraduationDate { get; set; }
         public string? AboutMe { get; set; }
         public List<string>? Tags { get; set; }
+        public string? CareerTitle { get; set; }
     }
 }

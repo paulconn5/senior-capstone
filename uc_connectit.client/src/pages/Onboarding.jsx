@@ -20,7 +20,8 @@ function Onboarding() {
         graduation_date: '',
         degreeIds: [],
         tagIds: [],
-        about_me: ''
+        about_me: '',
+        career_title: ''
     });
 
     // Load degrees + tags from backend
@@ -84,7 +85,8 @@ function Onboarding() {
                     graduationDate: parseInt(formData.graduation_date),
                     aboutMe: formData.about_me,
                     degreeIds: formData.degreeIds,
-                    tagIds: formData.tagIds
+                    tagIds: formData.tagIds,
+                    careerTitle: formData.career_title
                 })
             });
 
@@ -189,6 +191,15 @@ function Onboarding() {
                         ))}
                     </select>
                     <span className="hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</span>
+                </label>
+
+                <label>Career Title (optional)
+                    <input
+                        name="career_title"
+                        value={formData.career_title}
+                        onChange={handleChange}
+                        placeholder="e.g. Senior Cloud Engineer"
+                    />
                 </label>
 
                 <label>About Me

@@ -13,4 +13,6 @@
     public string AboutMe { get; set; } = string.Empty;
 
     public List<int> TagIds { get; set; } = new();
+
+    public string? CareerTitle { get; set; } = string.Empty;
 }

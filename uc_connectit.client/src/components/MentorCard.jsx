@@ -26,10 +26,14 @@ function MentorCard({ mentor }) {
         <h3 className="mentor-name">{mentor.name}</h3>
 
         <div className="mentor-info">
-          <div className="info-item">
-            <HiBriefcase className="info-icon" />
-            <span className="info-text">{mentor.field}</span>
-          </div>
+          {/* Only render career/field when present */}
+          {mentor.field && (
+            <div className="info-item">
+              <HiBriefcase className="info-icon" />
+              <span className="info-text">{mentor.field}</span>
+            </div>
+          )}
+
           <div className="info-item">
             <HiAcademicCap className="info-icon" />
             <span className="info-text">{mentor.education}</span>

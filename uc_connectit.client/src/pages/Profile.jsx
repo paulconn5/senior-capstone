@@ -1,4 +1,4 @@
-import { HiPencil, HiEnvelope } from 'react-icons/hi2'
+import { HiPencil, HiEnvelope, HiBriefcase } from 'react-icons/hi2'
 import Navbar from '../components/Navbar'
 import './Profile.css'
 import useAuth from '../hooks/useAuth'
@@ -48,6 +48,17 @@ function Profile() {
                         </p>
 
                         <div className="profile-info-grid">
+                            {/* Career field - only show if present */}
+                            {profile.careerTitle && (
+                                <div className="info-card">
+                                    <HiBriefcase className="info-icon" />
+                                    <div className="info-text">
+                                        <h3>Career</h3>
+                                        <p>{profile.careerTitle}</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="info-card">
                                 <HiEnvelope className="info-icon" />
                                 <div className="info-text">

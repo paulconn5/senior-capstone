@@ -44,6 +44,7 @@ namespace UC_ConnectIT.Server.Controllers
                 user.GraduationDate,
                 user.CreatedAt,
                 user.IsEmailVerified,
+                careerTitle = user.CareerTitle,
 
                 tags = user.UserTags?.Select(ut => new
                 {
@@ -61,7 +62,7 @@ namespace UC_ConnectIT.Server.Controllers
             return Ok(result);
         }
 
-        // PUT api/users/{id} - update profile (only owner)
+        // PUT api/users/{id} - update profile
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDTO request)
         {
@@ -83,7 +84,7 @@ namespace UC_ConnectIT.Server.Controllers
             if (user == null)
                 return NotFound();
 
-            // Update name if provided (split full name)
+            // Update name 
             if (!string.IsNullOrWhiteSpace(request.FullName))
             {
                 var parts = request.FullName.Trim().Split(' ', 2);
@@ -99,6 +100,9 @@ namespace UC_ConnectIT.Server.Controllers
 
             if (!string.IsNullOrWhiteSpace(request.AboutMe))
                 user.AboutMe = request.AboutMe;
+
+            if (!string.IsNullOrWhiteSpace(request.CareerTitle)) // NEW
+                user.CareerTitle = request.CareerTitle; // NEW
 
             // Remove existing user tags
             var existingUserTags = _db.UserTags.Where(ut => ut.UserId == id);
