@@ -171,7 +171,6 @@ function MentorDetail() {
             </div>
 
             <h1 className="mentor-name">{fullName}</h1>
-            {user.careerTitle && <p className="mentor-title">{user.careerTitle}</p>}
 
             <div className="mentor-details-grid">
               {user.careerTitle && (

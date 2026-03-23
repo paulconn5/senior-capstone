@@ -10,11 +10,6 @@ function MentorMatch() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // local filter state
-  const [educationFilter, setEducationFilter] = useState('all')
-  const [fieldFilter, setFieldFilter] = useState('all')
-  const [interestFilter, setInterestFilter] = useState('all')
-
   useEffect(() => {
     async function loadMatches() {
       setLoading(true)
@@ -40,7 +35,7 @@ function MentorMatch() {
 
         const data = await res.json()
 
-        // Map server DTO to MentorCard-friendly objects (preserve score)
+        // Map server DTO to MentorCard
         const mapped = data.map(m => ({
           id: m.id,
           name: `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'User',
@@ -48,7 +43,7 @@ function MentorMatch() {
           field: m.careerTitle || '',
           education: (m.degrees || []).map(d => d.name).join(', '),
           interests: (m.tags || []).map(t => t.name || t),
-          score: m.score ?? 0 
+          score: m.score ?? 0
         }))
 
         setMatches(mapped)
@@ -63,33 +58,9 @@ function MentorMatch() {
     loadMatches()
   }, [token])
 
-  const filtered = matches.filter((mentor) => {
-    // Education filter
-    const educationMatch = educationFilter === 'all' ||
-      (educationFilter === 'bachelors' && mentor.education.toLowerCase().includes('bachelor')) ||
-      (educationFilter === 'masters' && mentor.education.toLowerCase().includes('master')) ||
-      (educationFilter === 'phd' && mentor.education.toLowerCase().includes('phd'))
-
-    // Field filter
-    const fieldMatch = fieldFilter === 'all' ||
-      (fieldFilter === 'cybersecurity' && mentor.field.toLowerCase().includes('security')) ||
-      (fieldFilter === 'cloud' && mentor.field.toLowerCase().includes('cloud')) ||
-      (fieldFilter === 'design' && mentor.field.toLowerCase().includes('design')) ||
-      (fieldFilter === 'software' && mentor.field.toLowerCase().includes('software')) ||
-      (fieldFilter === 'data' && mentor.field.toLowerCase().includes('data')) ||
-      (fieldFilter === 'mobile' && mentor.field.toLowerCase().includes('mobile')) ||
-      (fieldFilter === 'network' && mentor.field.toLowerCase().includes('network')) ||
-      (fieldFilter === 'database' && mentor.field.toLowerCase().includes('database'))
-
-    // Interest filter
-    const interestMatch = interestFilter === 'all' ||
-      (interestFilter === 'security' && mentor.interests.some(i => i.toLowerCase().includes('security'))) ||
-      (interestFilter === 'cloud' && mentor.interests.some(i => i.toLowerCase().includes('cloud') || i.toLowerCase().includes('aws') || i.toLowerCase().includes('azure'))) ||
-      (interestFilter === 'design' && mentor.interests.some(i => i.toLowerCase().includes('design') || i.toLowerCase().includes('ux'))) ||
-      (interestFilter === 'development' && mentor.interests.some(i => i.toLowerCase().includes('development') || i.toLowerCase().includes('programming') || i.toLowerCase().includes('react')))
-
-    return educationMatch && fieldMatch && interestMatch
-  })
+  const subtitle = (profile && profile.role && profile.role.toLowerCase() === 'mentor')
+    ? 'Connect with IT students'
+    : 'Connect with experienced IT professionals'
 
   return (
     <div className="mentor-match-page">
@@ -98,57 +69,7 @@ function MentorMatch() {
       <main className="mentor-match-main">
         <div className="hero-section">
           <h2 className="page-title">UC IT Mentor Match</h2>
-          <p className="page-subtitle">Connect with experienced IT professionals</p>
-        </div>
-
-        <div className="filter-section">
-          <h3 className="filter-title">Filter</h3>
-          <div className="filter-controls">
-            <div className="filter-group">
-              <label>Education Level</label>
-              <select
-                value={educationFilter}
-                onChange={(e) => setEducationFilter(e.target.value)}
-              >
-                <option value="all">All Education Levels</option>
-                <option value="bachelors">Bachelor's</option>
-                <option value="masters">Master's</option>
-                <option value="phd">PhD</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>Field of Study</label>
-              <select
-                value={fieldFilter}
-                onChange={(e) => setFieldFilter(e.target.value)}
-              >
-                <option value="all">All Fields</option>
-                <option value="cybersecurity">Cybersecurity</option>
-                <option value="cloud">Cloud Computing</option>
-                <option value="design">UX/UI Design</option>
-                <option value="software">Software Engineering</option>
-                <option value="data">Data Science</option>
-                <option value="mobile">Mobile Development</option>
-                <option value="network">Network Engineering</option>
-                <option value="database">Database Administration</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>Interests</label>
-              <select
-                value={interestFilter}
-                onChange={(e) => setInterestFilter(e.target.value)}
-              >
-                <option value="all">All Interests</option>
-                <option value="security">Security</option>
-                <option value="cloud">Cloud Technologies</option>
-                <option value="design">Design</option>
-                <option value="development">Development</option>
-              </select>
-            </div>
-          </div>
+          <p className="page-subtitle">{subtitle}</p>
         </div>
 
         <div className="mentors-list-section">
@@ -156,9 +77,9 @@ function MentorMatch() {
           {error && <p className="error">{error}</p>}
           {!loading && !error && (
             <>
-              <p className="mentor-count">Showing {filtered.length} matches</p>
+              <p className="mentor-count">Showing {matches.length} matches</p>
               <div className="mentors-grid">
-                {filtered.map((mentor) => (
+                {matches.map((mentor) => (
                   <MentorCard key={mentor.id} mentor={mentor} />
                 ))}
               </div>

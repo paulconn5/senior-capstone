@@ -1,10 +1,12 @@
 import { HiPencil, HiEnvelope, HiBriefcase } from 'react-icons/hi2'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import './Profile.css'
 import useAuth from '../hooks/useAuth'
 
 function Profile() {
     const { profile, loading } = useAuth()
+    const navigate = useNavigate()
 
     if (loading) {
         return (
@@ -24,6 +26,14 @@ function Profile() {
         )
     }
 
+    const initials = (() => {
+        const name = `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
+        if (!name) return ''
+        const parts = name.split(/\s+/)
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+    })()
+
     const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
 
     return (
@@ -33,12 +43,30 @@ function Profile() {
             <main className="profile-main">
                 <div className="profile-card">
                     <div className="profile-card-header">
-                        <button className="edit-profile-button">
+                        <button className="edit-profile-button" onClick={() => navigate('/settings')}>
                             <HiPencil /> Edit Profile
                         </button>
                     </div>
 
                     <div className="profile-card-content">
+                        {/* Profile intials */}
+                        <div className="profile-photo-wrapper" title={fullName} aria-hidden>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    height: '100%',
+                                    fontSize: '2rem',
+                                    fontWeight: 700,
+                                    color: '#444'
+                                }}
+                            >
+                                {initials}
+                            </div>
+                        </div>
+
                         <h1 className="profile-name">
                             {fullName || 'User'}
                         </h1>
@@ -48,7 +76,7 @@ function Profile() {
                         </p>
 
                         <div className="profile-info-grid">
-                            {/* Career field - only show if present */}
+                            {/* Career field */}
                             {profile.careerTitle && (
                                 <div className="info-card">
                                     <HiBriefcase className="info-icon" />

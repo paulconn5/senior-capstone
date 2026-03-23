@@ -1,45 +1,80 @@
 import { useState, useEffect } from 'react'
-import { HiUser, HiBell, HiShieldCheck, HiPaintBrush, HiLockClosed } from 'react-icons/hi2'
+import { HiUser } from 'react-icons/hi2'
 import Navbar from '../components/Navbar'
 import './Settings.css'
 import useAuth from '../hooks/useAuth'
 
 function Settings() {
-  const { profile, token, loading } = useAuth()
+  const { profile, token } = useAuth()
+
+
+  const [availableDegrees, setAvailableDegrees] = useState([])
+  const [availableTags, setAvailableTags] = useState([])
 
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    major: '',
     year: '',
     about: '',
-    tags: ''
+    careerTitle: ''
   })
 
+  const [selectedDegreeIds, setSelectedDegreeIds] = useState([])
+  const [selectedTagIds, setSelectedTagIds] = useState([])
+
+  // Load degrees + tags for selects
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [degRes, tagRes] = await Promise.all([
+          fetch('https://localhost:7068/api/degrees'),
+          fetch('https://localhost:7068/api/tags')
+        ])
+
+        const degData = await degRes.json()
+        const tagData = await tagRes.json()
+
+        setAvailableDegrees(degData)
+        setAvailableTags(tagData)
+      } catch (err) {
+        console.error('Error loading dropdown data:', err)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  // Populate form when profile changeS
   useEffect(() => {
     if (!profile) return
+
     setFormData({
       fullName: `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim(),
       email: profile.email ?? '',
-      major: profile.degree ?? '',
       year: profile.degreeLevel ?? '',
       about: profile.aboutMe ?? '',
-      tags: (profile.tags || []).join(', ')
+      careerTitle: profile.careerTitle ?? ''
     })
-  }, [profile])
 
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    messageNotifications: true
-  })
+    // profile.degrees is normalized to {id, name}
+    const degIds = (profile.degrees || []).map(d => d.id).filter(Boolean)
+    setSelectedDegreeIds(degIds)
 
-  const [privacy, setPrivacy] = useState({
-    publicProfile: true
-  })
-
-  const [appearance, setAppearance] = useState({
-    darkMode: false
-  })
+    // profile.tags is a list of names (string)
+    if (availableTags.length > 0) {
+      const nameToId = {}
+      availableTags.forEach(t => {
+        nameToId[t.name] = t.id
+      })
+      const tagIds = (profile.tags || [])
+        .map(t => nameToId[t])
+        .filter(Boolean)
+      setSelectedTagIds(tagIds)
+    } else {
+      // clear selection until tags loaded
+      setSelectedTagIds([])
+    }
+  }, [profile, availableTags])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -49,28 +84,18 @@ function Settings() {
     }))
   }
 
-  const handleToggle = (section, key) => {
-    if (section === 'notifications') {
-      setNotifications(prev => ({
-        ...prev,
-        [key]: !prev[key]
-      }))
-    } else if (section === 'privacy') {
-      setPrivacy(prev => ({
-        ...prev,
-        [key]: !prev[key]
-      }))
-    } else if (section === 'appearance') {
-      setAppearance(prev => ({
-        ...prev,
-        [key]: !prev[key]
-      }))
-    }
+  function handleMultiSelectDegrees(e) {
+    const selected = Array.from(e.target.selectedOptions).map(o => parseInt(o.value))
+    setSelectedDegreeIds(selected)
   }
 
-  const handleSave = (e) => {
+  function handleMultiSelectTags(e) {
+    const selected = Array.from(e.target.selectedOptions).map(o => parseInt(o.value))
+    setSelectedTagIds(selected)
+  }
+
+  const handleSave = async (e) => {
     e.preventDefault()
-    // send updated profile to the API
     if (!profile || !token) {
       alert('Not authenticated')
       return
@@ -78,47 +103,76 @@ function Settings() {
 
     const body = {
       FullName: formData.fullName,
-      Degree: formData.major,
-      DegreeLevel: formData.year,
       AboutMe: formData.about,
-      Tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      CareerTitle: formData.careerTitle,
+      DegreeLevel: formData.year,
+      GraduationDate: formData.graduationDate ? parseInt(formData.graduationDate) : undefined,
+      DegreeIds: selectedDegreeIds,
+      TagIds: selectedTagIds
     }
 
-    fetch(`https://localhost:7068/api/users/${profile.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(body)
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to save')
-        return res.json()
+    try {
+      const res = await fetch(`https://localhost:7068/api/users/${profile.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
       })
-      .then(() => {
-        // update local stored user name
-        try {
-          const raw = localStorage.getItem('user')
-          if (raw) {
-            const obj = JSON.parse(raw)
-            const parts = (formData.fullName || '').trim().split(' ', 2)
-            obj.FirstName = parts[0] || obj.FirstName
-            obj.LastName = parts[1] || obj.LastName
-            localStorage.setItem('user', JSON.stringify(obj))
-          }
-        } catch {}
 
-        alert('Settings saved successfully!')
-      })
-      .catch(err => {
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        console.error('Save failed:', res.status, text)
+        throw new Error('Failed to save')
+      }
+
+      // update local stored user name
+      try {
+        const raw = localStorage.getItem('user')
+        if (raw) {
+          const obj = JSON.parse(raw)
+          const parts = (formData.fullName || '').trim().split(' ', 2)
+          obj.FirstName = parts[0] || obj.FirstName
+          obj.LastName = parts[1] || obj.LastName
+          // also persist careerTitle locally for initial fallback
+          obj.CareerTitle = formData.careerTitle || obj.CareerTitle
+          localStorage.setItem('user', JSON.stringify(obj))
+        }
+      } catch (err) {
         console.error(err)
-        alert('Failed to save settings')
-      })
+      }
+
+      alert('Settings saved successfully!')
+      // force a full reload so useAuth gets the updated profile
+      window.location.href = '/profile'
+    } catch (err) {
+      console.error(err)
+      alert('Failed to save settings')
+    }
   }
 
   const handleCancel = () => {
-    console.log('Cancelled')
+    if (!profile) return
+    setFormData({
+      fullName: `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim(),
+      email: profile.email ?? '',
+      year: profile.degreeLevel ?? '',
+      about: profile.aboutMe ?? '',
+      careerTitle: profile.careerTitle ?? ''
+    })
+    setSelectedDegreeIds((profile.degrees || []).map(d => d.id).filter(Boolean))
+    // reset tags mapping
+    if (availableTags.length > 0) {
+      const nameToId = {}
+      availableTags.forEach(t => {
+        nameToId[t.name] = t.id
+      })
+      const tagIds = (profile.tags || []).map(t => nameToId[t]).filter(Boolean)
+      setSelectedTagIds(tagIds)
+    } else {
+      setSelectedTagIds([])
+    }
   }
 
   return (
@@ -155,142 +209,74 @@ function Settings() {
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
+                disabled
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="major">Major</label>
+              <label>Graduation Year</label>
               <input
-                type="text"
-                id="major"
-                name="major"
-                value={formData.major}
+                type="number"
+                name="graduationDate"
+                value={formData.graduationDate ?? ''}
                 onChange={handleInputChange}
+                placeholder="e.g. 2026"
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="year">Year</label>
+              <label>Degree(s)</label>
               <select
-                id="year"
-                name="year"
-                value={formData.year}
-                onChange={handleInputChange}
+                multiple
+                value={selectedDegreeIds.map(String)}
+                onChange={handleMultiSelectDegrees}
+                size={5}
               >
-                <option value="Freshman">Freshman</option>
-                <option value="Sophomore">Sophomore</option>
-                <option value="Junior">Junior</option>
-                <option value="Senior">Senior</option>
-                <option value="Graduate">Graduate</option>
+                {availableDegrees.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
               </select>
+              <span className="hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</span>
+            </div>
+
+            <div className="form-group">
+              <label>Interests / Skills</label>
+              <select
+                multiple
+                value={selectedTagIds.map(String)}
+                onChange={handleMultiSelectTags}
+                size={5}
+              >
+                {availableTags.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <span className="hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</span>
+            </div>
+
+            <div className="form-group">
+              <label>Career Title (optional)</label>
+              <input
+                name="careerTitle"
+                value={formData.careerTitle}
+                onChange={handleInputChange}
+                placeholder="e.g. Senior Cloud Engineer"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="about">About</label>
+              <textarea
+                id="about"
+                name="about"
+                value={formData.about}
+                onChange={handleInputChange}
+                rows={3}
+              />
             </div>
           </div>
 
-          {/* Notifications */}
-          <div className="settings-section">
-            <div className="section-header">
-              <HiBell className="section-icon" />
-              <h2>Notifications</h2>
-            </div>
-
-            <div className="toggle-group">
-              <div className="toggle-info">
-                <h3>Email Notifications</h3>
-                <p>Receive updates via email</p>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={notifications.emailNotifications}
-                  onChange={() => handleToggle('notifications', 'emailNotifications')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="toggle-group">
-              <div className="toggle-info">
-                <h3>Message Notifications</h3>
-                <p>Get notified of new messages</p>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={notifications.messageNotifications}
-                  onChange={() => handleToggle('notifications', 'messageNotifications')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          {/* Privacy */}
-          <div className="settings-section">
-            <div className="section-header">
-              <HiShieldCheck className="section-icon" />
-              <h2>Privacy</h2>
-            </div>
-
-            <div className="toggle-group">
-              <div className="toggle-info">
-                <h3>Public Profile</h3>
-                <p>Allow others to view your profile</p>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={privacy.publicProfile}
-                  onChange={() => handleToggle('privacy', 'publicProfile')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          {/* Appearance */}
-          <div className="settings-section">
-            <div className="section-header">
-              <HiPaintBrush className="section-icon" />
-              <h2>Appearance</h2>
-            </div>
-
-            <div className="toggle-group">
-              <div className="toggle-info">
-                <h3>Dark Mode</h3>
-                <p>Switch to dark theme</p>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={appearance.darkMode}
-                  onChange={() => handleToggle('appearance', 'darkMode')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          {/* Security */}
-          <div className="settings-section">
-            <div className="section-header">
-              <HiLockClosed className="section-icon" />
-              <h2>Security</h2>
-            </div>
-
-            <button type="button" className="security-option">
-              Change Password
-            </button>
-
-            <button type="button" className="security-option">
-              Two-Factor Authentication
-            </button>
-
-            <button type="button" className="security-option">
-              Connected Devices
-            </button>
-          </div>
-
-          {/* Action Buttons */}
+          {/* Submit / cancel */}
           <div className="settings-actions">
             <button type="submit" className="btn-save">
               Save Changes

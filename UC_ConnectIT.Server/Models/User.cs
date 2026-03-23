@@ -19,7 +19,7 @@ namespace UC_ConnectIT.Server.Models
         public string LastName { get; set; } = string.Empty;
 
         [Required]
-        public string Role { get; set; } = "student";
+        public string Role { get; set; } = "Student";
 
         public string? AboutMe { get; set; }
 
@@ -29,13 +29,10 @@ namespace UC_ConnectIT.Server.Models
 
         public bool IsEmailVerified { get; set; } = false;
 
-        // TAG RELATIONSHIP
         public ICollection<UserTag> UserTags { get; set; } = new List<UserTag>();
 
-        // DEGREE RELATIONSHIP
         public ICollection<UserDegree> UserDegrees { get; set; } = new List<UserDegree>();
 
-        // Mentor display-only field
         public string? CareerTitle { get; set; }
     }
 }

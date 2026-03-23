@@ -79,6 +79,7 @@ namespace UC_ConnectIT.Server.Controllers
 
             var user = await _db.Users
                 .Include(u => u.UserTags)
+                .Include(u => u.UserDegrees)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
@@ -101,33 +102,59 @@ namespace UC_ConnectIT.Server.Controllers
             if (!string.IsNullOrWhiteSpace(request.AboutMe))
                 user.AboutMe = request.AboutMe;
 
-            if (!string.IsNullOrWhiteSpace(request.CareerTitle)) // NEW
-                user.CareerTitle = request.CareerTitle; // NEW
+            if (request.CareerTitle != null)
+                user.CareerTitle = request.CareerTitle.Trim();
 
-            // Remove existing user tags
+            if (!string.IsNullOrWhiteSpace(request.DegreeLevel))
+                user.Role = user.Role; 
+
+            // Remove existing user tags and degrees
             var existingUserTags = _db.UserTags.Where(ut => ut.UserId == id);
             _db.UserTags.RemoveRange(existingUserTags);
+
+            var existingUserDegrees = _db.UserDegrees.Where(ud => ud.UserId == id);
+            _db.UserDegrees.RemoveRange(existingUserDegrees);
+
             await _db.SaveChangesAsync();
 
-            // Add new tags if any
-            if (request.Tags != null && request.Tags.Count > 0)
+            // Add new tags by ids if provided
+            if (request.TagIds != null && request.TagIds.Count > 0)
             {
-                foreach (var tagName in request.Tags.Distinct())
-                {
-                    var tag = await _db.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
-                    if (tag == null)
-                    {
-                        tag = new Tag { Name = tagName };
-                        _db.Tags.Add(tag);
-                        await _db.SaveChangesAsync();
-                    }
+                var validTags = await _db.Tags
+                    .Where(t => request.TagIds.Contains(t.Id))
+                    .Select(t => t.Id)
+                    .ToListAsync();
 
+                foreach (var tagId in validTags)
+                {
                     _db.UserTags.Add(new UserTag
                     {
                         UserId = user.Id,
-                        TagId = tag.Id
+                        TagId = tagId
                     });
                 }
+
+                await _db.SaveChangesAsync();
+            }
+
+            // Add new degrees by ids if provided
+            if (request.DegreeIds != null && request.DegreeIds.Count > 0)
+            {
+                var validDegrees = await _db.Degrees
+                    .Where(d => request.DegreeIds.Contains(d.Id))
+                    .Select(d => d.Id)
+                    .ToListAsync();
+
+                foreach (var degreeId in validDegrees)
+                {
+                    _db.UserDegrees.Add(new UserDegree
+                    {
+                        UserId = user.Id,
+                        DegreeId = degreeId
+                    });
+                }
+
+                await _db.SaveChangesAsync();
             }
 
             await _db.SaveChangesAsync();

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 
-// Hook that reads auth token and user from localStorage
-// and fetches the full profile from the API when available.
+// Hook that reads auth token and user from localStorag and fetches the full profile from the API when available.
 export default function useAuth() {
   const [token, setToken] = useState(null)
   const [localUser, setLocalUser] = useState(null)
@@ -45,7 +44,7 @@ export default function useAuth() {
 
         if (!res.ok) {
           const text = await res.text().catch(() => '')
-          // If unauthorized, clear stored token/user to avoid repeated 401s.
+          // If unauthorized, clear stored token to avoid repeated 401
           if (res.status === 401) {
             localStorage.removeItem('token')
             localStorage.removeItem('user')
@@ -58,7 +57,7 @@ export default function useAuth() {
         } else {
           const data = await res.json()
 
-          // Normalize API response to client-friendly shape.
+          // Normalize API response
           const rawDegrees =
             data.degrees ??
             data.Degrees ??
@@ -101,6 +100,7 @@ export default function useAuth() {
             degrees: normalizedDegrees,
             degreeLevel: data.DegreeLevel ?? data.degreeLevel ?? localUser.degreeLevel,
             graduationDate: data.GraduationDate ?? data.graduationDate ?? localUser.graduationDate,
+            careerTitle: data.CareerTitle ?? data.careerTitle ?? localUser.careerTitle ?? localUser.CareerTitle ?? '',
             tags: (data.tags || data.Tags || localUser.tags || localUser.Tags || []).map(
               t => {
                 if (!t) return ''
@@ -115,7 +115,6 @@ export default function useAuth() {
           setProfile(normalized)
         }
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error('useAuth: fetchProfile error', e)
         setProfile(localUser)
       } finally {

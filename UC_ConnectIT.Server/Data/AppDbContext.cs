@@ -26,7 +26,7 @@ namespace UC_ConnectIT.Server.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // UserTags (Many-to-Many)
+            // UserTags
             modelBuilder.Entity<UserTag>()
                 .HasKey(ut => new { ut.UserId, ut.TagId });
 

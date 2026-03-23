@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import './Onboarding.css';
 
 function Onboarding() {
-    const [role, setRole] = useState('student');
+    const [role, setRole] = useState('Student');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -14,8 +14,7 @@ function Onboarding() {
         last_name: '',
         email: '',
         password: '',
-        role: 'student',
-        degree_level: '',
+        role: 'Student',
         graduation_date: '',
         degreeIds: [],
         tagIds: [],
@@ -80,8 +79,7 @@ function Onboarding() {
                     firstName: formData.first_name,
                     lastName: formData.last_name,
                     role: formData.role,
-                    degreeLevel: formData.degree_level,
-                    graduationDate: parseInt(formData.graduation_date),
+                    graduationDate: formData.graduation_date ? parseInt(formData.graduation_date, 10) : null,
                     aboutMe: formData.about_me,
                     degreeIds: formData.degreeIds,
                     tagIds: formData.tagIds,
@@ -121,15 +119,15 @@ function Onboarding() {
             <div className="role-toggle">
                 <button
                     type="button"
-                    className={role === 'student' ? 'role-btn active' : 'role-btn'}
-                    onClick={() => handleRoleChange('student')}
+                    className={role === 'Student' ? 'role-btn active' : 'role-btn'}
+                    onClick={() => handleRoleChange('Student')}
                 >
                     I am a Student
                 </button>
                 <button
                     type="button"
-                    className={role === 'mentor' ? 'role-btn active' : 'role-btn'}
-                    onClick={() => handleRoleChange('mentor')}
+                    className={role === 'Mentor' ? 'role-btn active' : 'role-btn'}
+                    onClick={() => handleRoleChange('Mentor')}
                 >
                     I am a Mentor
                 </button>
@@ -153,16 +151,6 @@ function Onboarding() {
                     <input name="last_name" value={formData.last_name} onChange={handleChange} required />
                 </label>
 
-                <label>Degree Level
-                    <select name="degree_level" value={formData.degree_level} onChange={handleChange} required>
-                        <option value="">Select one</option>
-                        <option value="Associates">Associates</option>
-                        <option value="Bachelors">Bachelors</option>
-                        <option value="Masters">Masters</option>
-                        <option value="PhD">PhD</option>
-                    </select>
-                </label>
-
                 <label>Graduation Year
                     <input
                         type="number"
@@ -183,7 +171,7 @@ function Onboarding() {
                     <span className="hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</span>
                 </label>
 
-                <label>{role === 'student' ? 'Interests' : 'Skills'}
+                <label>{role === 'Student' ? 'Interests' : 'Skills'}
                     <select multiple value={formData.tagIds.map(String)} onChange={handleMultiSelectTags} size={5}>
                         {tags.map(t => (
                             <option key={t.id} value={t.id}>{t.name}</option>

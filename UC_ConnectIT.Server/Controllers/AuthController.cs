@@ -147,7 +147,7 @@ namespace UC_ConnectIT.Server.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
-                new Claim(ClaimTypes.Role, user.Role ?? "student")
+                new Claim(ClaimTypes.Role, user.Role ?? "Student")
             };
 
             var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);

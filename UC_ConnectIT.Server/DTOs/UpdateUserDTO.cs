@@ -8,7 +8,9 @@ namespace UC_ConnectIT.Server.DTOs
         public string? DegreeLevel { get; set; }
         public int? GraduationDate { get; set; }
         public string? AboutMe { get; set; }
-        public List<string>? Tags { get; set; }
+        public List<int>? DegreeIds { get; set; }
+        public List<int>? TagIds { get; set; }
+
         public string? CareerTitle { get; set; }
     }
 }
