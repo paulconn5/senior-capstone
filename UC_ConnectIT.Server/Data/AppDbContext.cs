@@ -26,7 +26,7 @@ namespace UC_ConnectIT.Server.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // UserTags 
+            // UserTags (Many-to-Many)
             modelBuilder.Entity<UserTag>()
                 .HasKey(ut => new { ut.UserId, ut.TagId });
 
@@ -46,7 +46,7 @@ namespace UC_ConnectIT.Server.Data
 
             modelBuilder.Entity<UserDegree>()
                 .HasOne(ud => ud.User)
-                .WithMany()
+                .WithMany(u => u.UserDegrees)
                 .HasForeignKey(ud => ud.UserId);
 
             modelBuilder.Entity<UserDegree>()

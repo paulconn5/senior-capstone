@@ -26,7 +26,10 @@ namespace UC_ConnectIT.Server.Controllers
             var user = await _db.Users
                 .Include(u => u.UserTags)
                     .ThenInclude(ut => ut.Tag)
+                .Include(u => u.UserDegrees)
+                    .ThenInclude(ud => ud.Degree)
                 .FirstOrDefaultAsync(u => u.Id == id);
+
             if (user == null)
                 return NotFound();
 
@@ -41,7 +44,18 @@ namespace UC_ConnectIT.Server.Controllers
                 user.GraduationDate,
                 user.CreatedAt,
                 user.IsEmailVerified,
-                tags = user.UserTags?.Select(ut => new { ut.Tag.Id, ut.Tag.Name }).ToList()
+
+                tags = user.UserTags?.Select(ut => new
+                {
+                    ut.Tag.Id,
+                    ut.Tag.Name
+                }).ToList(),
+
+                degrees = user.UserDegrees?.Select(ud => new
+                {
+                    ud.Degree.Id,
+                    ud.Degree.Name
+                }).ToList()
             };
 
             return Ok(result);
@@ -101,7 +115,7 @@ namespace UC_ConnectIT.Server.Controllers
                     {
                         tag = new Tag { Name = tagName };
                         _db.Tags.Add(tag);
-                        await _db.SaveChangesAsync(); // ensure tag.Id is set
+                        await _db.SaveChangesAsync();
                     }
 
                     _db.UserTags.Add(new UserTag
