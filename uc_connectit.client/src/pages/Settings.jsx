@@ -7,7 +7,6 @@ import useAuth from '../hooks/useAuth'
 function Settings() {
   const { profile, token } = useAuth()
 
-
   const [availableDegrees, setAvailableDegrees] = useState([])
   const [availableTags, setAvailableTags] = useState([])
 
@@ -15,6 +14,7 @@ function Settings() {
     fullName: '',
     email: '',
     year: '',
+    graduationDate: '',
     about: '',
     careerTitle: ''
   })
@@ -52,6 +52,7 @@ function Settings() {
       fullName: `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim(),
       email: profile.email ?? '',
       year: profile.degreeLevel ?? '',
+      graduationDate: profile.graduationDate != null ? String(profile.graduationDate) : '',
       about: profile.aboutMe ?? '',
       careerTitle: profile.careerTitle ?? ''
     })
@@ -158,6 +159,7 @@ function Settings() {
       fullName: `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim(),
       email: profile.email ?? '',
       year: profile.degreeLevel ?? '',
+      graduationDate: profile.graduationDate != null ? String(profile.graduationDate) : '',
       about: profile.aboutMe ?? '',
       careerTitle: profile.careerTitle ?? ''
     })
